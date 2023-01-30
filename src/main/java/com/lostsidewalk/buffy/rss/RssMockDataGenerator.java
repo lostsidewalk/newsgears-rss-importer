@@ -27,15 +27,15 @@ class RssMockDataGenerator {
     }
 
     private List<SyndEntry> buildMockArticle(QueryDefinition q, SyndFeed parentFeed) {
-        String feedIdent = q.getFeedIdent();
+        Long feedId = q.getFeedId();
         SyndEntryImpl mockArticle = new SyndEntryImpl();
-        mockArticle.setAuthor("test-author" + feedIdent);
-        mockArticle.setDescription(buildSyndContent("test-description" + feedIdent));
+        mockArticle.setAuthor("test-author" + feedId);
+        mockArticle.setDescription(buildSyndContent("test-description" + feedId));
         mockArticle.setSource(parentFeed);
         mockArticle.setPublishedDate(new Date());
-        mockArticle.setUri("test-url" + feedIdent);
+        mockArticle.setUri("test-url" + feedId);
         mockArticle.setModules(buildMediaModule());
-        mockArticle.setTitle("test-title" + feedIdent);
+        mockArticle.setTitle("test-title" + feedId);
 
         return singletonList(mockArticle);
     }

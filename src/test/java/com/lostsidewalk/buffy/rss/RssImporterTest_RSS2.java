@@ -47,7 +47,7 @@ public class RssImporterTest_RSS2 {
     @Autowired
     RssImporter rssImporter;
 
-    static final QueryDefinition TEST_RSS_QUERY =  QueryDefinition.from("testFeedIdent", "me", "http://localhost/test.rss", "RSS", null);
+    static final QueryDefinition TEST_RSS_QUERY =  QueryDefinition.from(669L, "me", "testQuery", "http://localhost/test.rss", "RSS", null);
 
     static final String TEST_RSS_RESPONSE =
             "<rss" +
@@ -74,7 +74,7 @@ public class RssImporterTest_RSS2 {
             "   <link>https://www.nytimes.com/2022/11/29/world/asia/china-protest-covid-security.html</link>" +
             "   <guid isPermaLink=\"true\">https://www.nytimes.com/2022/11/29/world/asia/china-protest-covid-security.html</guid>" +
             "   <atom:link href=\"https://www.nytimes.com/2022/11/29/world/asia/china-protest-covid-security.html\" rel=\"standout\"/>" +
-            "   <description>Communist Party officials are using decades-old tactics, along with some new ones, to quash the most widespread protests in decades. But Xi Jinping is silent.</description>" +
+            "   <description type=\"text\">Communist Party officials are using decades-old tactics, along with some new ones, to quash the most widespread protests in decades. But Xi Jinping is silent.</description>" +
             "   <dc:creator>Chris Buckley</dc:creator>" +
             "   <pubDate>Tue, 29 Nov 2022 15:29:27 +0000</pubDate>" +
             "   <category domain=\"http://www.nytimes.com/namespaces/keywords/des\">Politics and Government</category>" +
@@ -104,7 +104,7 @@ public class RssImporterTest_RSS2 {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
-            when(this.syndFeedService.fetch(TEST_RSS_QUERY.getQueryText())).thenReturn(syndFeedResponse);
+            when(this.syndFeedService.fetch(eq(TEST_RSS_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
             // carry out test
             ImporterMetrics importerMetrics = rssImporter.performImport(TEST_RSS_QUERY, new Importer.ImportResponseCallback() {
                 @Override
@@ -113,15 +113,19 @@ public class RssImporterTest_RSS2 {
                     assertEquals(1, set.size());
                     StagingPost s = set.iterator().next();
                     assertEquals("RssAtom", s.getImporterId());
-                    assertEquals("testFeedIdent", s.getFeedIdent());
-                    assertEquals("[query=http://localhost/test.rss]", s.getImporterDesc());
-                    assertEquals("China Uses Surveillance, Intimidation to Snuff Out Covid Protests", s.getPostTitle());
-                    assertEquals("Communist Party officials are using decades-old tactics, along with some new ones, to quash the most widespread protests in decades. But Xi Jinping is silent.", s.getPostDesc());
+                    assertEquals(669L, s.getFeedId());
+                    assertEquals("http://localhost/test.rss", s.getImporterDesc());
+                    assertNotNull(s.getPostTitle());
+                    assertNull(s.getPostTitle().getType());
+                    assertEquals("China Uses Surveillance, Intimidation to Snuff Out Covid Protests", s.getPostTitle().getValue());
+                    assertNotNull(s.getPostDesc());
+                    assertEquals("text", s.getPostDesc().getType());
+                    assertEquals("Communist Party officials are using decades-old tactics, along with some new ones, to quash the most widespread protests in decades. But Xi Jinping is silent.", s.getPostDesc().getValue());
                     assertEquals("https://www.nytimes.com/2022/11/29/world/asia/china-protest-covid-security.html", s.getPostUrl());
                     assertEquals("https://static01.nyt.com/images/2022/11/29/world/29CHINA-SECURITY-01/29CHINA-SECURITY-01-moth.jpg", s.getPostImgUrl());
                     assertEquals("394DF6AFE22C93D0FE40E0C7B011D889", s.getPostImgTransportIdent());
                     assertNotNull(s.getImportTimestamp());
-                    assertEquals("65015B4932B75690CCCBC19852463C69", s.getPostHash());
+                    assertEquals("A15FCDB72389A9A3E59EA1366EA1B121", s.getPostHash());
                     assertEquals("me", s.getUsername());
                     assertNotNull(s.getPublishTimestamp());
                     assertEquals("Tue Nov 29 09:29:27 CST 2022", s.getPublishTimestamp().toString());
@@ -148,7 +152,7 @@ public class RssImporterTest_RSS2 {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
-            when(this.syndFeedService.fetch(TEST_RSS_QUERY.getQueryText())).thenReturn(syndFeedResponse);
+            when(this.syndFeedService.fetch(eq(TEST_RSS_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
             rssImporter.doImport(singletonList(TEST_RSS_QUERY));
             verify(this.successAggregator, times(1)).offer(any());
         } catch (Exception e) {

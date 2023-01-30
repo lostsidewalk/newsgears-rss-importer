@@ -18,7 +18,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.lostsidewalk.newsgears:newsgears-data:0.2'
+    implementation 'com.lostsidewalk.newsgears:newsgears-data:0.3'
 
     // SLF4J
     implementation 'org.slf4j:slf4j-api:2.0.5'
@@ -26,11 +26,13 @@ dependencies {
     // json
     implementation 'org.json:json:20220924'
     // spring-boot-starter
-    implementation 'org.springframework.boot:spring-boot-starter:3.0.0'
+    implementation 'org.springframework.boot:spring-boot-starter:3.0.1'
     // commons-collections4
     implementation 'org.apache.commons:commons-collections4:4.4'
     // commons-lang
     implementation 'org.apache.commons:commons-lang3:3.12.0'
+    // guava
+    implementation 'com.google.guava:guava:31.1-jre'
     // jaxb-api
     implementation 'javax.xml.bind:jaxb-api:2.4.0-b180830.0359'
     // GSON
@@ -39,9 +41,13 @@ dependencies {
     implementation 'com.rometools:rome:1.18.0'
     // rome-modules
     implementation 'com.rometools:rome-modules:1.18.0'
+    // jackson-core
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.14.1'
+    // jackson-databind
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.1'
 
     // test
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.0.0') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.0.1') {
         exclude group: 'com.vaadin.external.google', module: 'android-json'
     }
     // junit-jupiter
@@ -59,7 +65,7 @@ publishing {
         maven(MavenPublication) {
             groupId = 'com.lostsidewalk.newsgears'
             artifactId = 'newsgears-rss-importer'
-            version = '0.2'
+            version = '0.3'
 
             from components.java
         }

@@ -2,6 +2,7 @@ package com.lostsidewalk.buffy.rss;
 
 import com.lostsidewalk.buffy.Importer;
 import com.lostsidewalk.buffy.Importer.ImporterMetrics;
+import com.lostsidewalk.buffy.post.PostUrl;
 import com.lostsidewalk.buffy.post.StagingPost;
 import com.lostsidewalk.buffy.query.QueryDefinition;
 import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService;
@@ -16,10 +17,12 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.io.StringReader;
+import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
 import static java.util.Collections.singletonList;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -47,7 +50,7 @@ public class RssImporterTest_ATOM2 {
     @Autowired
     RssImporter rssImporter;
 
-    static final QueryDefinition TEST_ATOM_QUERY = QueryDefinition.from("testFeedIdent", "me", "http://localhost/test.atom", "ATOM", null);
+    static final QueryDefinition TEST_ATOM_QUERY = QueryDefinition.from(667L, "me", "testQuery", "http://localhost/test.atom", "ATOM", null);
 
     static final String TEST_ATOM_RESPONSE =
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
@@ -67,13 +70,13 @@ public class RssImporterTest_ATOM2 {
             "   <uri>https://old.reddit.com/user/Pissmittens</uri>" +
             "  </author>" +
             "  <category term=\"milf\" label=\"r/milf\"/>" +
-            "  <content type=\"html\">&lt;table&gt; &lt;tr&gt;&lt;td&gt; &lt;a href=&quot;https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/&quot;&gt; &lt;img src=&quot;https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&amp;amp;crop=smart&amp;amp;auto=webp&amp;amp;s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e&quot; alt=&quot;Announcement: Official r/milf discord&quot; title=&quot;Announcement: Official r/milf discord&quot; /&gt; &lt;/a&gt; &lt;/td&gt;&lt;td&gt; &amp;#32; submitted by &amp;#32; &lt;a href=&quot;https://old.reddit.com/user/Pissmittens&quot;&gt; /u/Pissmittens &lt;/a&gt; &lt;br/&gt; &lt;span&gt;&lt;a href=&quot;https://discord.gg/M7MPQyZPfR&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt; &amp;#32; &lt;span&gt;&lt;a href=&quot;https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt; &lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</content>" +
+            "  <content type=\"text/html\">&lt;table&gt; &lt;tr&gt;&lt;td&gt; &lt;a href=&quot;https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/&quot;&gt; &lt;img src=&quot;https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&amp;amp;crop=smart&amp;amp;auto=webp&amp;amp;s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e&quot; alt=&quot;Announcement: Official r/milf discord&quot; title=&quot;Announcement: Official r/milf discord&quot; /&gt; &lt;/a&gt; &lt;/td&gt;&lt;td&gt; &amp;#32; submitted by &amp;#32; &lt;a href=&quot;https://old.reddit.com/user/Pissmittens&quot;&gt; /u/Pissmittens &lt;/a&gt; &lt;br/&gt; &lt;span&gt;&lt;a href=&quot;https://discord.gg/M7MPQyZPfR&quot;&gt;[link]&lt;/a&gt;&lt;/span&gt; &amp;#32; &lt;span&gt;&lt;a href=&quot;https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/&quot;&gt;[comments]&lt;/a&gt;&lt;/span&gt; &lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</content>" +
             "  <id>t3_yszhsp</id>" +
             "  <media:thumbnail url=\"https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&amp;crop=smart&amp;auto=webp&amp;s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e\" />" +
             "  <link href=\"https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/\" />" +
             "  <updated>2022-11-12T07:16:52+00:00</updated>" +
             "  <published>2022-11-12T07:16:52+00:00</published>" +
-            "  <title>Announcement: Official r/milf discord</title>" +
+            "  <title type=\"text\">Announcement: Official r/milf discord</title>" +
             " </entry>" +
             "</feed>";
 
@@ -83,7 +86,7 @@ public class RssImporterTest_ATOM2 {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
-            when(this.syndFeedService.fetch(TEST_ATOM_QUERY.getQueryText())).thenReturn(syndFeedResponse);
+            when(this.syndFeedService.fetch(eq(TEST_ATOM_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
             // carry out test
             ImporterMetrics importerMetrics = rssImporter.performImport(TEST_ATOM_QUERY, new Importer.ImportResponseCallback() {
                 @Override
@@ -92,17 +95,37 @@ public class RssImporterTest_ATOM2 {
                     assertEquals(1, set.size());
                     StagingPost s = set.iterator().next();
                     assertEquals("RssAtom", s.getImporterId());
-                    assertEquals("testFeedIdent", s.getFeedIdent());
-                    assertEquals("[query=http://localhost/test.atom]", s.getImporterDesc());
-                    assertEquals("Announcement: Official r/milf discord", s.getPostTitle());
-                    assertEquals("<table> <tr><td> <a href=\"https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/\"> <img src=\"https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&amp;crop=smart&amp;auto=webp&amp;s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e\" alt=\"Announcement: Official r/milf discord\" title=\"Announcement: Official r/milf discord\" /> </a> </td><td> &#32; submitted by &#32; <a href=\"https://old.reddit.com/user/Pissmittens\"> /u/Pissmittens </a> <br/> <span><a href=\"https://discord.gg/M7MPQyZPfR\">[link]</a></span> &#32; <span><a href=\"https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/\">[comments]</a></span> </td></tr></table>", s.getPostDesc());
+                    assertEquals(667L, s.getFeedId());
+                    assertEquals("http://localhost/test.atom", s.getImporterDesc());
+                    assertNotNull(s.getPostTitle());
+                    assertEquals("text", s.getPostTitle().getType());
+                    assertEquals("Announcement: Official r/milf discord", s.getPostTitle().getValue());
+                    //
+                    assertNull(s.getPostDesc());
+                    //
+                    assertNotNull(s.getPostContents());
+                    assertEquals(1, s.getPostContents().size());
+                    assertEquals("text/html", s.getPostContents().get(0).getType());
+                    assertEquals("<table> <tr><td> <a href=\"https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/\"> <img src=\"https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&amp;crop=smart&amp;auto=webp&amp;s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e\" alt=\"Announcement: Official r/milf discord\" title=\"Announcement: Official r/milf discord\" /> </a> </td><td> &#32; submitted by &#32; <a href=\"https://old.reddit.com/user/Pissmittens\"> /u/Pissmittens </a> <br/> <span><a href=\"https://discord.gg/M7MPQyZPfR\">[link]</a></span> &#32; <span><a href=\"https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/\">[comments]</a></span> </td></tr></table>",
+                            s.getPostContents().get(0).getValue());
+                    //
                     assertEquals("https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/", s.getPostUrl());
+                    //
+                    List<PostUrl> postUrls = s.getPostUrls();
+                    assertNotNull(postUrls);
+                    assertEquals(0, postUrls.size());
+                    //
                     assertEquals("https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&crop=smart&auto=webp&s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e", s.getPostImgUrl());
                     assertNotNull(s.getImportTimestamp());
-                    assertEquals("C8D44AB6805DC75F1AA0F26061E13D86", s.getPostHash());
+                    assertEquals("74712AB70E25192CDE351A884F1C2D92", s.getPostHash());
                     assertEquals("me", s.getUsername());
-                    assertEquals("/u/Pissmittens", s.getAuthorName());
-                    assertEquals("milf", s.getPostCategory());
+                    //
+                    List<String> postCategories = s.getPostCategories();
+                    assertNotNull(postCategories);
+                    assertEquals(1, postCategories.size());
+                    String postCategory = postCategories.get(0);
+                    assertEquals("milf", postCategory);
+                    //
                     assertNotNull(s.getPublishTimestamp());
                     assertEquals("Sat Nov 12 01:16:52 CST 2022", s.getPublishTimestamp().toString());
                     assertNull(s.getExpirationTimestamp());
@@ -128,7 +151,7 @@ public class RssImporterTest_ATOM2 {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
-            when(this.syndFeedService.fetch(TEST_ATOM_QUERY.getQueryText())).thenReturn(syndFeedResponse);
+            when(this.syndFeedService.fetch(eq(TEST_ATOM_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
             rssImporter.doImport(singletonList(TEST_ATOM_QUERY));
             verify(this.successAggregator, times(1)).offer(any());
         } catch (Exception e) {

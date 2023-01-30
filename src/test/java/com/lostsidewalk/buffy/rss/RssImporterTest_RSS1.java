@@ -47,7 +47,7 @@ public class RssImporterTest_RSS1 {
     @Autowired
     RssImporter rssImporter;
 
-    static final QueryDefinition TEST_RSS_QUERY = QueryDefinition.from("testFeedIdent", "me", "http://localhost/test.rss", "RSS", null);
+    static final QueryDefinition TEST_RSS_QUERY = QueryDefinition.from(668L, "me", "testQuery", "http://localhost/test.rss", "RSS", null);
 
     static final String TEST_RSS_RESPONSE =
             "<rss" +
@@ -111,7 +111,7 @@ public class RssImporterTest_RSS1 {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
-            when(this.syndFeedService.fetch(TEST_RSS_QUERY.getQueryText())).thenReturn(syndFeedResponse);
+            when(this.syndFeedService.fetch(eq(TEST_RSS_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
             // carry out test
             ImporterMetrics importerMetrics = rssImporter.performImport(TEST_RSS_QUERY, new Importer.ImportResponseCallback() {
                 @Override
@@ -120,15 +120,19 @@ public class RssImporterTest_RSS1 {
                     assertEquals(1, set.size());
                     StagingPost s = set.iterator().next();
                     assertEquals("RssAtom", s.getImporterId());
-                    assertEquals("testFeedIdent", s.getFeedIdent());
-                    assertEquals("[query=http://localhost/test.rss]", s.getImporterDesc());
-                    assertEquals("US Soccer's attempt to highlight the struggles of women protestors inside the Islamic Republic may have backfired", s.getPostTitle());
-                    assertEquals("• Iran threatened families of national soccer team, according to security source • US to play Iran at 2 p.m. ET in politically charged World Cup match", s.getPostDesc());
+                    assertEquals(668L, s.getFeedId());
+                    assertEquals("http://localhost/test.rss", s.getImporterDesc());
+                    assertNotNull(s.getPostTitle());
+                    assertNull(s.getPostTitle().getType());
+                    assertEquals("     US Soccer's attempt to highlight the struggles of women protestors inside the Islamic Republic may have backfired    ", s.getPostTitle().getValue());
+                    assertNotNull(s.getPostDesc());
+                    assertEquals("text/html", s.getPostDesc().getType());
+                    assertEquals("     • Iran threatened families of national soccer team, according to security source • US to play Iran at 2 p.m. ET in politically charged World Cup match    ", s.getPostDesc().getValue());
                     assertEquals("https://www.cnn.com/2022/11/28/world/iran-us-soccer-world-cup-analysis-intl-spt/index.html", s.getPostUrl());
                     assertEquals("https://cdn.cnn.com/cnnnext/dam/assets/221127112511-iran-flag-world-cup-1125-super-169.jpg", s.getPostImgUrl());
                     assertEquals("CBAB8C3E106008CFCC17D41141FBA8B4", s.getPostImgTransportIdent());
                     assertNotNull(s.getImportTimestamp());
-                    assertEquals("A7A11D0BF5290773BE48BFAA12AF8790", s.getPostHash());
+                    assertEquals("47EA8A19DA9B4B9C2A1D340FCE23F4E8", s.getPostHash());
                     assertEquals("me", s.getUsername());
                     assertNotNull(s.getPublishTimestamp());
                     assertEquals("Tue Nov 29 07:18:37 CST 2022", s.getPublishTimestamp().toString());
@@ -156,7 +160,7 @@ public class RssImporterTest_RSS1 {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
-            when(this.syndFeedService.fetch(TEST_RSS_QUERY.getQueryText())).thenReturn(syndFeedResponse);
+            when(this.syndFeedService.fetch(eq(TEST_RSS_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
             rssImporter.doImport(singletonList(TEST_RSS_QUERY));
             verify(this.successAggregator, times(1)).offer(any());
         } catch (Exception e) {
