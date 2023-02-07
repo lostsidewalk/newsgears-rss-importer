@@ -513,7 +513,7 @@ public class RssImporter implements Importer {
         });
     }
 
-    private static final String RSS_ATOM_IMPORTER_USER_AGENT = "Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed import process, on behalf of %d users";
+    private static final String RSS_ATOM_IMPORTER_USER_AGENT = "Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of %d users";
 
     private ImportResult performImport(RssQuery rssQuery, int subscriberCt, SyndFeedResponseCallback syndFeedResponseCallback) {
         log.info("Importing rssQuery={}", rssQuery);

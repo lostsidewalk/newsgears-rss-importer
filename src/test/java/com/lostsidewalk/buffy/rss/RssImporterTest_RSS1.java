@@ -123,7 +123,7 @@ public class RssImporterTest_RSS1 {
                     eq(TEST_RSS_QUERY.getQueryText()),
                     isNull(),
                     isNull(),
-                    eq("Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed import process, on behalf of 1 users"),
+                    eq("Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of 1 users"),
                     eq(false))
                 ).thenReturn(syndFeedResponse);
             // carry out test
@@ -180,7 +180,7 @@ public class RssImporterTest_RSS1 {
                     eq(TEST_RSS_QUERY.getQueryText()),
                     isNull(),
                     isNull(),
-                    eq("Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed import process, on behalf of 1 users"),
+                    eq("Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of 1 users"),
                     eq(false))
                 ).thenReturn(syndFeedResponse);
             rssImporter.doImport(singletonList(TEST_RSS_QUERY));
