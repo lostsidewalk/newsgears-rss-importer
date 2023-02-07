@@ -1,44 +1,185 @@
 package com.lostsidewalk.buffy.rss.syndfeed;
 
-import com.lostsidewalk.buffy.rss.RssImporterConfigProps;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.Data;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.Base64;
 
+import static com.lostsidewalk.buffy.query.QueryMetrics.QueryExceptionType.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Service
 @SuppressWarnings("unused")
 public class SyndFeedService {
 
-    @Autowired
-    RssImporterConfigProps configProps;
+    @Data
+    public static class SyndFeedResponse {
 
-    public SyndFeed fetch(String url, int subscriberCt, String username, String password) throws SyndFeedException {
-        try {
-            URL feedUrl = new URL(url);
-            URLConnection feedConnection = feedUrl.openConnection();
-            if (username != null && password != null) {
-                feedConnection.setRequestProperty("Authorization",
-                        "Basic " + new String(Base64.getEncoder().encode((username + ":" + password).getBytes(UTF_8)))
-                );
-            }
-            // TODO: make this property-configurable
-            String userAgentTemplate = "Lost Sidewalk FeedGears RSS Aggregator v.0.3, fetching on behalf of %d subscriber(s)";
-            feedConnection.setRequestProperty("User-Agent", String.format(userAgentTemplate, subscriberCt));
-            SyndFeedInput input = new SyndFeedInput();
-            byte[] allBytes = feedConnection.getInputStream().readAllBytes();
-            ByteArrayInputStream bais = new ByteArrayInputStream(allBytes);
-            return input.build(new XmlReader(bais));
-        } catch (Exception e) {
-            throw new SyndFeedException(e.getMessage());
+        final SyndFeed syndFeed;
+        final int httpStatusCode;
+        final String httpStatusMessage;
+        final String redirectUrl;
+        final Integer redirectHttpStatusCode;
+        final String redirectHttpStatusMessage;
+
+        private SyndFeedResponse(SyndFeed syndFeed, int httpStatusCode, String httpStatusMessage, String redirectUrl, Integer redirectHttpStatusCode, String redirectHttpStatusMessage) {
+            this.syndFeed = syndFeed;
+            this.httpStatusCode = httpStatusCode;
+            this.httpStatusMessage = httpStatusMessage;
+            this.redirectUrl = redirectUrl;
+            this.redirectHttpStatusCode = redirectHttpStatusCode;
+            this.redirectHttpStatusMessage = redirectHttpStatusMessage;
         }
+
+        public static SyndFeedResponse from(SyndFeed syndFeed, int httpStatusCode, String httpStatusMessage, String redirectUrl, Integer redirectHttpStatusCode, String redirectHttpStatusMessage) {
+            return new SyndFeedResponse(syndFeed, httpStatusCode, httpStatusMessage, redirectUrl, redirectHttpStatusCode, redirectHttpStatusMessage);
+        }
+
+        public static SyndFeedResponse from(SyndFeed syndFeed, int httpStatusCode, String httpStatusMessage) {
+            return new SyndFeedResponse(syndFeed, httpStatusCode, httpStatusMessage, null, null, null);
+        }
+    }
+
+    public SyndFeedResponse fetch(String url, String username, String password, String userAgent, boolean followUnsecureRedirects) throws SyndFeedException {
+        Integer statusCode = null;
+        String statusMessage = null;
+        String redirectUrl = null;
+        Integer redirectStatusCode = null;
+        String redirectStatusMessage = null;
+        try {
+            // setup the initial connection
+            HttpURLConnection feedConnection = openFeedConnection(url);
+            // add authentication, if any
+            boolean hasAuthenticationHeaders = addAuthenticationHeader(feedConnection, username, password);
+            // add the UA header
+            addUserAgentHeader(feedConnection, userAgent);
+            // add the cache control header
+            addCacheControlHeader(feedConnection);
+            // get the (initial) status response
+            statusCode = getStatusCode(feedConnection);
+            // get the (initial) status message
+            statusMessage = getStatusMessage(feedConnection);
+            // if this is a redirect...
+            if (isPermanentRedirect(statusCode)) {
+                throw new SyndFeedException(url, statusCode, statusMessage, null, redirectStatusCode, null, PERMANENTLY_REDIRECTED);
+            }
+            if (isTemporaryRedirect(statusCode)) {
+                // get the redirect location URL
+                redirectUrl = feedConnection.getHeaderField("Location");
+                // check for unsecure redirect
+                boolean isUnsecureRedirect = "http".equalsIgnoreCase(feedConnection.getURL().getProtocol());
+                // if this is an unsecure redirect (no auth), but we have been instructed not to trust such redirects, bail
+                if (isUnsecureRedirect && (hasAuthenticationHeaders || !followUnsecureRedirects)) {
+                    throw new SyndFeedException(url, statusCode, statusMessage, redirectUrl, null, null, UNSECURE_REDIRECT); // (http URL got redirected)
+                }
+                // open the redirect connection
+                feedConnection = openFeedConnection(redirectUrl);
+                // add authentication to the redirect, if any
+                addAuthenticationHeader(feedConnection, username, password);
+                // add the UA header to the redirect
+                addUserAgentHeader(feedConnection, userAgent);
+                // get the redirect status response
+                redirectStatusCode = getStatusCode(feedConnection);
+                // get the redirect status message
+                redirectStatusMessage = getStatusMessage(feedConnection);
+                // if *this* is also a redirect...
+                if (isRedirect(redirectStatusCode)) {
+                    // TOO_MANY_REDIRECTS
+                    throw new SyndFeedException(url, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage, TOO_MANY_REDIRECTS); // (redirect got redirected)
+                }
+                // if the redirect ends in CLIENT ERROR (response status 4xx)
+                if (isClientError(redirectStatusCode)) {
+                    // DISCOVERY_CLIENT_ERROR
+                    throw new SyndFeedException(url, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage, HTTP_CLIENT_ERROR); // (client error status on redirect)
+                    // DISCOVERY_SERVER_ERROR
+                } else if (isServerError(redirectStatusCode)) {
+                    throw new SyndFeedException(url, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage, HTTP_SERVER_ERROR); // (server error status on redirect)
+                }
+            } else if (isClientError(statusCode)) { // otherwise, if this is a client error (4xx)
+                // CLIENT_ERROR
+                throw new SyndFeedException(url, statusCode, statusMessage, null, null, null, HTTP_CLIENT_ERROR);
+            } else if (isServerError(statusCode)) { // otherwise, if this is a server error (5xx)
+                // SERVER_ERROR
+                throw new SyndFeedException(url, statusCode, statusMessage, null, null, null, HTTP_SERVER_ERROR);
+            }  // otherwise (this is a success response)
+
+            try (InputStream is = feedConnection.getInputStream()) {
+                byte[] allBytes = feedConnection.getInputStream().readAllBytes();
+                ByteArrayInputStream bais = new ByteArrayInputStream(allBytes);
+                XmlReader xmlReader = new XmlReader(bais);
+                SyndFeedInput input = new SyndFeedInput();
+                input.setAllowDoctypes(true);
+                SyndFeed feed = input.build(xmlReader);
+                return SyndFeedResponse.from(feed, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage);
+            }
+        } catch (Exception e) {
+            throw new SyndFeedException(url, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage, e);
+        }
+    }
+
+    private static HttpURLConnection openFeedConnection(String url) throws IOException {
+        URL feedUrl = new URL(url);
+        return (HttpURLConnection) feedUrl.openConnection();
+    }
+
+    private static boolean addAuthenticationHeader(HttpURLConnection feedConnection, String username, String password) {
+        if (username != null && password != null) {
+            feedConnection.setRequestProperty("Authorization",
+                    "Basic " + new String(Base64.getEncoder().encode((username + ":" + password).getBytes(UTF_8)))
+            );
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void addUserAgentHeader(HttpURLConnection feedConnection, String userAgent) {
+        feedConnection.setRequestProperty("User-Agent", userAgent);
+    }
+
+    private static void addCacheControlHeader(HttpURLConnection feedConnection) {
+        feedConnection.setRequestProperty("Cache-Control", "no-cache");
+    }
+
+    private static int getStatusCode(HttpURLConnection feedConnection) throws IOException {
+        feedConnection.setInstanceFollowRedirects(true);
+        return feedConnection.getResponseCode();
+    }
+
+    public static boolean isSuccess(int statusCode) {
+        return statusCode == HttpURLConnection.HTTP_OK;
+    }
+
+    public static boolean isRedirect(int statusCode) {
+        return (isTemporaryRedirect(statusCode) || isPermanentRedirect(statusCode)
+                || statusCode == HttpURLConnection.HTTP_SEE_OTHER);
+    }
+
+    public static boolean isTemporaryRedirect(int statusCode) {
+        return statusCode == HttpURLConnection.HTTP_MOVED_TEMP;
+    }
+
+    public static boolean isPermanentRedirect(int statusCode) {
+        return statusCode == HttpURLConnection.HTTP_MOVED_PERM;
+    }
+
+    public static boolean isClientError(int statusCode) {
+        return statusCode >= HttpURLConnection.HTTP_BAD_REQUEST && statusCode < HttpURLConnection.HTTP_INTERNAL_ERROR;
+    }
+
+    public static boolean isServerError(int statusCode) {
+        return statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR;
+    }
+
+    private static String getStatusMessage(HttpURLConnection feedConnection) throws IOException {
+        return feedConnection.getResponseMessage();
     }
 }

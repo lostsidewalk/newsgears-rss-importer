@@ -6,8 +6,10 @@ import com.google.gson.JsonObject;
 import com.lostsidewalk.buffy.Importer;
 import com.lostsidewalk.buffy.post.*;
 import com.lostsidewalk.buffy.query.QueryDefinition;
+import com.lostsidewalk.buffy.query.QueryMetrics;
 import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedException;
 import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService;
+import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService.SyndFeedResponse;
 import com.rometools.modules.itunes.ITunes;
 import com.rometools.modules.mediarss.MediaEntryModule;
 import com.rometools.modules.mediarss.MediaEntryModuleImpl;
@@ -29,8 +31,9 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.Executors.newFixedThreadPool;
@@ -100,16 +103,24 @@ public class RssImporter implements Importer {
     }
 
     @Override
-    public void doImport(List<QueryDefinition> queryDefinitions) {
+    public ImportResult doImport(List<QueryDefinition> queryDefinitions) {
         if (this.configProps.getDisabled()) {
             log.warn("RSS importer is administratively disabled");
             if (this.configProps.getImportMockData()) {
                 log.warn("RSS importer importing mock records");
-                queryDefinitions.forEach(q -> getArticlesResponseHandler(new HashSet<>(queryDefinitions))
-                        .onSuccess(rssMockDataGenerator.buildMockResponse(q))
-                );
+                Set<StagingPost> allStagingPosts = new HashSet<>();
+                List<QueryMetrics> allQueryMetrics = new ArrayList<>(size(queryDefinitions));
+                CountDownLatch latch = new CountDownLatch(size(queryDefinitions));
+                queryDefinitions.forEach(q -> {
+                    ImportResult ir = getArticlesResponseHandler(new HashSet<>(queryDefinitions), latch)
+                        .onSuccess(rssMockDataGenerator.buildMockResponse(q));
+                    allStagingPosts.addAll(ir.getImportSet());
+                    allQueryMetrics.addAll(ir.getQueryMetrics());
+                });
+                return ImportResult.from(allStagingPosts, allQueryMetrics);
             }
-            return;
+
+            return ImportResult.from(emptySet(), emptyList());
         }
 
         log.info("RSS importer running at {}", Instant.now());
@@ -124,10 +135,15 @@ public class RssImporter implements Importer {
         //
         allQueryMap.forEach((key, value) -> uniqueQueryMap.computeIfAbsent(value, ignored -> new HashSet<>()).add(key));
         //
-        CountDownLatch latch = new CountDownLatch(size(uniqueQueryMap.keySet()));
+        Set<StagingPost> allStagingPosts = new HashSet<>();
+        List<QueryMetrics> allQueryMetrics = new ArrayList<>(size(supportedQueryDefinitions));
+        //
+        CountDownLatch latch = new CountDownLatch(size(uniqueQueryMap.keySet()) * 2);
         log.info("RSS import latch initialized to: {}", latch.getCount());
         uniqueQueryMap.forEach((r, q) -> rssThreadPool.submit(() -> {
-            this.performImport(r, size(q), getArticlesResponseHandler(q));
+            ImportResult importResult = this.performImport(r, size(q), getArticlesResponseHandler(q, latch));
+            allStagingPosts.addAll(importResult.getImportSet());
+            allQueryMetrics.addAll(importResult.getQueryMetrics());
             latch.countDown();
             if (latch.getCount() % 50 == 0) {
                 log.info("RSS import latch currently at {}: ", latch.getCount());
@@ -140,6 +156,8 @@ public class RssImporter implements Importer {
         }
 
         log.info("RSS importer finished at {}", Instant.now());
+
+        return ImportResult.from(allStagingPosts, allQueryMetrics);
     }
 
     private boolean supportsQueryType(String queryType) {
@@ -148,77 +166,108 @@ public class RssImporter implements Importer {
 
     interface SyndFeedResponseCallback {
 
-        void onSuccess(SyndFeed response);
+        ImportResult onSuccess(SyndFeedResponse response);
 
-        void onFailure(Throwable throwable);
+        ImportResult onFailure(SyndFeedException error);
     }
 
-    private SyndFeedResponseCallback getArticlesResponseHandler(Set<QueryDefinition> queryDefinitions) {
+    private SyndFeedResponseCallback getArticlesResponseHandler(Set<QueryDefinition> queryDefinitions, CountDownLatch latch) {
         return new SyndFeedResponseCallback() {
             @Override
-            public void onSuccess(SyndFeed response) {
+            public ImportResult onSuccess(SyndFeedResponse response) {
+                Set<StagingPost> importSet = new HashSet<>();
+                List<QueryMetrics> queryMetrics = new ArrayList<>(size(queryDefinitions));
+                Date importTimestamp = new Date();
+                // for ea. query,
                 for (QueryDefinition q : queryDefinitions) {
-                    try {
-                        AtomicInteger importCt = new AtomicInteger(0);
-                        importArticleResponse(q.getFeedId(), q.getQueryText(), q.getQueryTitle(), response, q.getUsername()).forEach(s -> {
-                            log.debug("Adding post hash={} to queue for feedId={}, username={}", s.getPostHash(), q.getFeedId(), q.getUsername());
-                            successAggregator.offer(s);
-                            importCt.getAndIncrement();
-                        });
-                        log.info("Import success, feedId={}, username={}, queryType={}, queryText={}, importCt={}", q.getFeedId(), q.getUsername(), q.getQueryType(), q.getQueryText(), importCt.intValue());
-                    } catch (Exception e) {
-                        onFailure(e);
-                    }
+                    // convert the syndfeed response into a stream of staging posts for that query, and send them to the success agg. queue
+                    Set<StagingPost> importedArticles = importArticleResponse(q.getFeedId(), q.getQueryText(), q.getQueryTitle(), response.getSyndFeed(), q.getUsername(), importTimestamp);
+                    importSet.addAll(importedArticles);
+                    latch.countDown();
+                    // update query metrics
+                    queryMetrics.add(QueryMetrics.from(
+                            q.getId(),
+                            response.getHttpStatusCode(),
+                            response.getHttpStatusMessage(),
+                            response.getRedirectUrl(),
+                            response.getRedirectHttpStatusCode(),
+                            response.getRedirectHttpStatusMessage(),
+                            importTimestamp,
+                            size(importedArticles)
+                        ));
+                    log.info("Import success, feedId={}, username={}, queryType={}, queryText={}, importCt={}", q.getFeedId(), q.getUsername(), q.getQueryType(), q.getQueryText(), size(importedArticles));
                 }
+
+                return ImportResult.from(importSet, queryMetrics);
             }
 
             @Override
-            public void onFailure(Throwable throwable) {
-                log.error("Import failure due to: {}", throwable.getMessage());
-                errorAggregator.offer(throwable);
+            public ImportResult onFailure(SyndFeedException exception) {
+                log.error("Import failure due to: {}", exception.getMessage());
+                errorAggregator.offer(exception);
+                List<QueryMetrics> queryMetrics = new ArrayList<>(size(queryDefinitions));
+                queryDefinitions.stream()
+                    .map(q -> QueryMetrics.from(
+                        q.getId(),
+                        exception.httpStatusCode,
+                        exception.httpStatusMessage,
+                        exception.redirectUrl,
+                        exception.redirectHttpStatusCode,
+                        exception.redirectHttpStatusMessage,
+                        new Date(), // import timestamp
+                        0 // import ct
+                    )).forEach(m -> {
+                        latch.countDown();
+                        m.setErrorType(exception.exceptionType);
+                        m.setErrorDetail(exception.getMessage());
+                        queryMetrics.add(m);
+                    });
+
+                return ImportResult.from(emptySet(), queryMetrics);
             }
         };
     }
 
-    private static Set<StagingPost> importArticleResponse(Long feedId, String query, String queryTitle, SyndFeed response, String username) throws NoSuchAlgorithmException {
+    private static Set<StagingPost> importArticleResponse(Long feedId, String query, String queryTitle, SyndFeed response, String username, Date importTimestamp) {
         Set<StagingPost> stagingPosts = new HashSet<>();
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        for (SyndEntry e : response.getEntries()) {
-            Date pubDate = e.getPublishedDate();
-            //
-            StagingPost p = StagingPost.from(
-                    RSS_ATOM_IMPORTER_ID, // importer Id
-                    feedId, // feed Id
-                    getImporterDesc(queryTitle, query), // importer desc (feed title)
-                    getObjectSource(e), // source
-                    ofNullable(e.getSource()).map(SyndFeed::getTitle).map(StringUtils::trim).orElse(response.getTitle()), // source name (or feed title)
-                    ofNullable(e.getSource()).map(SyndFeed::getLink).map(StringUtils::trim).orElse(response.getLink()), // source url (or feed link)
-                            // HERE: post_title_type
-                    ofNullable(e.getTitleEx()).map(RssImporter::convertContentObject).orElse(null), // post title
-                            // HERE: description_type
-                    ofNullable(e.getDescription()).map(RssImporter::convertContentObject).orElse(null),
-                            // HERE: List<String> postContents now needs to List<String, String> so that content type can ride along
-                    ofNullable(e.getContents()).map(RssImporter::convertContentList).orElse(null), // post contents
-                    getPostMedia(e), // post media
-                    getPostITunes(e), // post iTunes
-                    trim(e.getLink()), // post URL
-                    ofNullable(e.getLinks()).map(RssImporter::convertLinkList).orElse(null), // post URLs
-                    getThumbnailUrl(e), // post img URL
-                    new Date(), // import timestamp
-                    computeHash(md, feedId, getObjectSource(e)), // post hash
-                    username, // username
-                    trim(e.getComments()), // post comments
-                    response.getCopyright(), // post rights
-                    ofNullable(e.getContributors()).map(RssImporter::convertPersonList).orElse(null), // contributors
-                    ofNullable(getAuthors(e)).map(RssImporter::convertPersonList).orElse(null), // authors
-                    ofNullable(e.getCategories()).map(RssImporter::convertCategoryList).orElse(null), // post categories
-                    e.getPublishedDate(), // publish timestamp
-                    null, // expiration timestamp (none)
-                    ofNullable(e.getEnclosures()).map(RssImporter::convertEnclosureList).orElse(null), // enclosures
-                    e.getUpdatedDate() // updated timestamp
-            );
-            stagingPosts.add(p);
-        }
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            for (SyndEntry e : response.getEntries()) {
+                //
+                StagingPost p = StagingPost.from(
+                        RSS_ATOM_IMPORTER_ID, // importer Id
+                        feedId, // feed Id
+                        getImporterDesc(queryTitle, query), // importer desc (feed title)
+                        getObjectSource(e), // source
+                        ofNullable(e.getSource()).map(SyndFeed::getTitle).map(StringUtils::trim).orElse(response.getTitle()), // source name (or feed title)
+                        ofNullable(e.getSource()).map(SyndFeed::getLink).map(StringUtils::trim).orElse(response.getLink()), // source url (or feed link)
+                        // HERE: post_title_type
+                        ofNullable(e.getTitleEx()).map(RssImporter::convertContentObject).orElse(null), // post title
+                        // HERE: description_type
+                        ofNullable(e.getDescription()).map(RssImporter::convertContentObject).orElse(null),
+                        // HERE: List<String> postContents now needs to List<String, String> so that content type can ride along
+                        ofNullable(e.getContents()).map(RssImporter::convertContentList).orElse(null), // post contents
+                        getPostMedia(e), // post media
+                        getPostITunes(e), // post iTunes
+                        trim(e.getLink()), // post URL
+                        ofNullable(e.getLinks()).map(RssImporter::convertLinkList).orElse(null), // post URLs
+                        getThumbnailUrl(e), // post img URL
+                        importTimestamp, // import timestamp
+                        computeHash(md, feedId, getObjectSource(e)), // post hash
+                        username, // username
+                        trim(e.getComments()), // post comments
+                        response.getCopyright(), // post rights
+                        ofNullable(e.getContributors()).map(RssImporter::convertPersonList).orElse(null), // contributors
+                        ofNullable(getAuthors(e)).map(RssImporter::convertPersonList).orElse(null), // authors
+                        ofNullable(e.getCategories()).map(RssImporter::convertCategoryList).orElse(null), // post categories
+                        e.getPublishedDate(), // publish timestamp
+                        null, // expiration timestamp (none)
+                        ofNullable(e.getEnclosures()).map(RssImporter::convertEnclosureList).orElse(null), // enclosures
+                        e.getUpdatedDate() // updated timestamp
+                );
+                stagingPosts.add(p);
+            }
+        } catch (NoSuchAlgorithmException ignored) {}
 
         return stagingPosts;
     }
@@ -440,36 +489,33 @@ public class RssImporter implements Importer {
 
     private static final String RSS_ATOM_IMPORTER_ID = "RssAtom";
 
-    @Override
-    public ImporterMetrics performImport(QueryDefinition queryDefinition, ImportResponseCallback importResponseCallback) {
+    ImportResult performImport(QueryDefinition queryDefinition, ImportResponseCallback importResponseCallback) {
         requireNonNull(queryDefinition, "Query definition must not be null");
         requireNonNull(importResponseCallback, "Import response callback must not be null");
         return this.performImport(RssQuery.from(queryDefinition), 1, new SyndFeedResponseCallback() {
             @Override
-            public void onSuccess(SyndFeed response) {
-                try {
-                    Set<StagingPost> stagingPosts = importArticleResponse(
-                            queryDefinition.getFeedId(),
-                            queryDefinition.getQueryTitle(),
-                            queryDefinition.getQueryText(),
-                            response,
-                            queryDefinition.getUsername()
-                    );
-                    importResponseCallback.onSuccess(stagingPosts);
-                } catch (Exception e) {
-                    onFailure(e);
-                }
+            public ImportResult onSuccess(SyndFeedResponse fullResponse) {
+                Set<StagingPost> stagingPosts = importArticleResponse(
+                        queryDefinition.getFeedId(),
+                        queryDefinition.getQueryTitle(),
+                        queryDefinition.getQueryText(),
+                        fullResponse.getSyndFeed(),
+                        queryDefinition.getUsername(),
+                        new Date() // import timestamp
+                );
+                return importResponseCallback.onSuccess(stagingPosts);
             }
 
             @Override
-            public void onFailure(Throwable throwable) {
-                importResponseCallback.onFailure(throwable);
+            public ImportResult onFailure(SyndFeedException exception) {
+                return importResponseCallback.onFailure(exception);
             }
         });
     }
 
-    private ImporterMetrics performImport(RssQuery rssQuery, int subscriberCt, SyndFeedResponseCallback syndFeedResponseCallback) {
-        int successCt = 0, errorCt = 0;
+    private static final String RSS_ATOM_IMPORTER_USER_AGENT = "Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed import process, on behalf of %d users";
+
+    private ImportResult performImport(RssQuery rssQuery, int subscriberCt, SyndFeedResponseCallback syndFeedResponseCallback) {
         log.info("Importing rssQuery={}", rssQuery);
 
         String queryType = rssQuery.getQueryType();
@@ -481,20 +527,20 @@ public class RssImporter implements Importer {
         String feedUsername = getStringProperty(queryConfigObj, "username");
         String feedPassword = getStringProperty(queryConfigObj, "password");
 
+        ImportResult importResult = null;
         switch (queryType) {
             case ATOM, RSS -> {
                 try {
                     log.info("Fetching RSS feed from url={}", queryText);
-                    syndFeedResponseCallback.onSuccess(syndFeedService.fetch(queryText, subscriberCt, feedUsername, feedPassword));
-                    successCt++;
+                    String userAgent = String.format(RSS_ATOM_IMPORTER_USER_AGENT, subscriberCt);
+                    importResult = syndFeedResponseCallback.onSuccess(syndFeedService.fetch(queryText, feedUsername, feedPassword, userAgent, false));
                 } catch (SyndFeedException e) {
-                    syndFeedResponseCallback.onFailure(e);
-                    errorCt++;
+                    importResult = syndFeedResponseCallback.onFailure(e);
                 }
             }
             default -> log.error("Query type not supported by this importer: queryType={}, importerId={}", queryType, getImporterId());
         }
-        return new ImporterMetrics(successCt, errorCt);
+        return importResult;
     }
 
     private static String getStringProperty(JsonObject obj, String propName) {

@@ -1,6 +1,7 @@
 package com.lostsidewalk.buffy.rss;
 
 import com.lostsidewalk.buffy.query.QueryDefinition;
+import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService.SyndFeedResponse;
 import com.rometools.modules.mediarss.MediaEntryModuleImpl;
 import com.rometools.modules.mediarss.types.Metadata;
 import com.rometools.modules.mediarss.types.Thumbnail;
@@ -19,11 +20,11 @@ import static java.util.Collections.singletonList;
 @SuppressWarnings("unused")
 class RssMockDataGenerator {
 
-    SyndFeed buildMockResponse(QueryDefinition q) {
+    SyndFeedResponse buildMockResponse(QueryDefinition q) {
         SyndFeedImpl mockResponse = new SyndFeedImpl();
         mockResponse.setEntries(buildMockArticle(q, mockResponse));
 
-        return mockResponse;
+        return SyndFeedResponse.from(mockResponse, 200, "OK");
     }
 
     private List<SyndEntry> buildMockArticle(QueryDefinition q, SyndFeed parentFeed) {

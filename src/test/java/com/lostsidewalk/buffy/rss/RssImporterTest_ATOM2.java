@@ -1,11 +1,13 @@
 package com.lostsidewalk.buffy.rss;
 
-import com.lostsidewalk.buffy.Importer;
-import com.lostsidewalk.buffy.Importer.ImporterMetrics;
+import com.lostsidewalk.buffy.Importer.ImportResponseCallback;
+import com.lostsidewalk.buffy.Importer.ImportResult;
 import com.lostsidewalk.buffy.post.PostUrl;
 import com.lostsidewalk.buffy.post.StagingPost;
 import com.lostsidewalk.buffy.query.QueryDefinition;
+import com.lostsidewalk.buffy.query.QueryMetrics;
 import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService;
+import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService.SyndFeedResponse;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import org.junit.jupiter.api.Test;
@@ -17,12 +19,13 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.io.StringReader;
+import java.util.Date;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
-import static java.util.Collections.singletonList;
-import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static java.util.Collections.*;
+import static org.apache.commons.collections4.CollectionUtils.size;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -40,6 +43,9 @@ public class RssImporterTest_ATOM2 {
 
     @MockBean
     Queue<Throwable> errorAggregator;
+
+    @MockBean
+    Queue<QueryMetrics> queryMetricsAggregator;
 
     @MockBean
     RssMockDataGenerator rssMockDataGenerator;
@@ -85,12 +91,19 @@ public class RssImporterTest_ATOM2 {
         try {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
-            SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
-            when(this.syndFeedService.fetch(eq(TEST_ATOM_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
+            SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
+            SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
+            when(this.syndFeedService.fetch(
+                    eq(TEST_ATOM_QUERY.getQueryText()),
+                    isNull(),
+                    isNull(),
+                    eq("Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed import process, on behalf of 1 users"),
+                    eq(false))
+                ).thenReturn(syndFeedResponse);
             // carry out test
-            ImporterMetrics importerMetrics = rssImporter.performImport(TEST_ATOM_QUERY, new Importer.ImportResponseCallback() {
+            ImportResult importResult = rssImporter.performImport(TEST_ATOM_QUERY, new ImportResponseCallback() {
                 @Override
-                public void onSuccess(Set<StagingPost> set) {
+                public ImportResult onSuccess(Set<StagingPost> set) {
                     assertNotNull(set);
                     assertEquals(1, set.size());
                     StagingPost s = set.iterator().next();
@@ -130,16 +143,18 @@ public class RssImporterTest_ATOM2 {
                     assertEquals("Sat Nov 12 01:16:52 CST 2022", s.getPublishTimestamp().toString());
                     assertNull(s.getExpirationTimestamp());
                     assertFalse(s.isPublished());
+
+                    return ImportResult.from(emptySet(), singletonList(QueryMetrics.from(1L, new Date(), 1)));
                 }
 
                 @Override
-                public void onFailure(Throwable throwable) {
+                public ImportResult onFailure(Throwable throwable) {
                     fail(throwable.getMessage());
+                    return ImportResult.from(emptySet(), emptyList());
                 }
             });
-            assertNotNull(importerMetrics);
-            assertEquals(1, importerMetrics.getSuccessCt());
-            assertEquals(0, importerMetrics.getErrorCt());
+            assertNotNull(importResult);
+            assertEquals(1, size(importResult.getQueryMetrics()));
         } catch (Exception e) {
             fail(e.getMessage());
         }
@@ -150,10 +165,16 @@ public class RssImporterTest_ATOM2 {
         try {
             // setup mocks
             SyndFeedInput syndFeedInput = new SyndFeedInput();
-            SyndFeed syndFeedResponse = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
-            when(this.syndFeedService.fetch(eq(TEST_ATOM_QUERY.getQueryText()), eq(1), isNull(), isNull())).thenReturn(syndFeedResponse);
+            SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
+            SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
+            when(this.syndFeedService.fetch(
+                    eq(TEST_ATOM_QUERY.getQueryText()),
+                    isNull(),
+                    isNull(),
+                    eq("Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed import process, on behalf of 1 users"),
+                    eq(false))
+                ).thenReturn(syndFeedResponse);
             rssImporter.doImport(singletonList(TEST_ATOM_QUERY));
-            verify(this.successAggregator, times(1)).offer(any());
         } catch (Exception e) {
             fail(e.getMessage());
         }
