@@ -32,8 +32,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
+import static java.util.Collections.*;
 import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 import static java.util.concurrent.Executors.newFixedThreadPool;
@@ -135,8 +134,8 @@ public class RssImporter implements Importer {
         //
         allQueryMap.forEach((key, value) -> uniqueQueryMap.computeIfAbsent(value, ignored -> new HashSet<>()).add(key));
         //
-        Set<StagingPost> allStagingPosts = new HashSet<>();
-        List<QueryMetrics> allQueryMetrics = new ArrayList<>(size(supportedQueryDefinitions));
+        Set<StagingPost> allStagingPosts = synchronizedSet(new HashSet<>());
+        List<QueryMetrics> allQueryMetrics = synchronizedList(new ArrayList<>(size(supportedQueryDefinitions)));
         //
         CountDownLatch latch = new CountDownLatch(size(uniqueQueryMap.keySet()) * 2);
         log.info("RSS import latch initialized to: {}", latch.getCount());
