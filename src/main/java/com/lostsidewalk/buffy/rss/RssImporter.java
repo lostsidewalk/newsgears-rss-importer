@@ -180,7 +180,7 @@ public class RssImporter implements Importer {
                 // for ea. query,
                 for (QueryDefinition q : queryDefinitions) {
                     // convert the syndfeed response into a stream of staging posts for that query, and send them to the success agg. queue
-                    Set<StagingPost> importedArticles = importArticleResponse(q.getFeedId(), q.getQueryText(), q.getQueryTitle(), response.getSyndFeed(), q.getUsername(), importTimestamp);
+                    Set<StagingPost> importedArticles = importArticleResponse(q.getFeedId(), q.getId(), q.getQueryText(), q.getQueryTitle(), response.getSyndFeed(), q.getUsername(), importTimestamp);
                     importSet.addAll(importedArticles);
                     latch.countDown();
                     // update query metrics
@@ -194,7 +194,8 @@ public class RssImporter implements Importer {
                             importTimestamp,
                             size(importedArticles)
                         ));
-                    log.info("Import success, feedId={}, username={}, queryType={}, queryText={}, importCt={}", q.getFeedId(), q.getUsername(), q.getQueryType(), q.getQueryText(), size(importedArticles));
+                    log.info("Import success, username={}, feedId={}, queryId={}, queryType={}, queryText={}, importCt={}",
+                            q.getUsername(), q.getFeedId(), q.getId(), q.getQueryType(), q.getQueryText(), size(importedArticles));
                 }
 
                 return ImportResult.from(importSet, queryMetrics);
@@ -227,7 +228,7 @@ public class RssImporter implements Importer {
         };
     }
 
-    private static Set<StagingPost> importArticleResponse(Long feedId, String query, String queryTitle, SyndFeed response, String username, Date importTimestamp) {
+    private static Set<StagingPost> importArticleResponse(Long feedId, Long queryId, String query, String queryTitle, SyndFeed response, String username, Date importTimestamp) {
         Set<StagingPost> stagingPosts = new HashSet<>();
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -237,6 +238,7 @@ public class RssImporter implements Importer {
                         RSS_ATOM_IMPORTER_ID, // importer Id
                         feedId, // feed Id
                         getImporterDesc(queryTitle, query), // importer desc (feed title)
+                        queryId, // query Id
                         getObjectSource(e), // source
                         ofNullable(e.getSource()).map(SyndFeed::getTitle).map(StringUtils::trim).orElse(response.getTitle()), // source name (or feed title)
                         ofNullable(e.getSource()).map(SyndFeed::getLink).map(StringUtils::trim).orElse(response.getLink()), // source url (or feed link)
@@ -496,6 +498,7 @@ public class RssImporter implements Importer {
             public ImportResult onSuccess(SyndFeedResponse fullResponse) {
                 Set<StagingPost> stagingPosts = importArticleResponse(
                         queryDefinition.getFeedId(),
+                        queryDefinition.getId(),
                         queryDefinition.getQueryTitle(),
                         queryDefinition.getQueryText(),
                         fullResponse.getSyndFeed(),
