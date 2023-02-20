@@ -97,7 +97,8 @@ public class RssImporter implements Importer {
         // thread pool setup
         //
         int processorCt = Runtime.getRuntime().availableProcessors() - 1;
-        log.info("Starting discovery thread pool: processCount={}", processorCt);
+        processorCt = processorCt > 0 ? processorCt : 1;
+        log.info("Starting RSS importer thread pool: processCount={}", processorCt);
         this.rssThreadPool = newFixedThreadPool(processorCt, new ThreadFactoryBuilder().setNameFormat("rss-importer-%d").build());
     }
 
