@@ -19,7 +19,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -240,9 +239,6 @@ public class RssImporter implements Importer {
                         feedId, // feed Id
                         getImporterDesc(queryTitle, query), // importer desc (feed title)
                         queryId, // query Id
-                        getObjectSource(e), // source
-                        ofNullable(e.getSource()).map(SyndFeed::getTitle).map(StringUtils::trim).orElse(response.getTitle()), // source name (or feed title)
-                        ofNullable(e.getSource()).map(SyndFeed::getLink).map(StringUtils::trim).orElse(response.getLink()), // source url (or feed link)
                         // HERE: post_title_type
                         ofNullable(e.getTitleEx()).map(RssImporter::convertContentObject).orElse(null), // post title
                         // HERE: description_type
