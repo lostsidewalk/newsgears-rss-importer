@@ -176,7 +176,7 @@ public class RssImporterTest_RSS2 {
                     eq("Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of 1 users"),
                     eq(false))
                 ).thenReturn(syndFeedResponse);
-            rssImporter.doImport(singletonList(TEST_RSS_QUERY));
+            rssImporter.doImport(singletonList(TEST_RSS_QUERY), emptyMap());
         } catch (Exception e) {
             fail(e.getMessage());
         }

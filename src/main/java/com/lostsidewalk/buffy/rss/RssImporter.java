@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.lostsidewalk.buffy.Importer;
+import com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo;
 import com.lostsidewalk.buffy.post.*;
 import com.lostsidewalk.buffy.query.QueryDefinition;
 import com.lostsidewalk.buffy.query.QueryMetrics;
@@ -39,6 +40,7 @@ import static java.util.stream.Collectors.toMap;
 import static javax.xml.bind.DatatypeConverter.printHexBinary;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.CollectionUtils.size;
+import static org.apache.commons.collections4.MapUtils.isEmpty;
 import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
 import static org.apache.commons.lang3.StringUtils.*;
@@ -102,7 +104,7 @@ public class RssImporter implements Importer {
     }
 
     @Override
-    public ImportResult doImport(List<QueryDefinition> queryDefinitions) {
+    public ImportResult doImport(List<QueryDefinition> queryDefinitions, Map<String, FeedDiscoveryInfo> discoveryCache) {
         if (this.configProps.getDisabled()) {
             log.warn("RSS importer is administratively disabled");
             if (this.configProps.getImportMockData()) {
@@ -140,9 +142,27 @@ public class RssImporter implements Importer {
         CountDownLatch latch = new CountDownLatch(size(uniqueQueryMap.keySet()) * 2);
         log.info("RSS import latch initialized to: {}", latch.getCount());
         uniqueQueryMap.forEach((r, q) -> rssThreadPool.submit(() -> {
-            ImportResult importResult = this.performImport(r, size(q), getArticlesResponseHandler(q, latch));
-            allStagingPosts.addAll(importResult.getImportSet());
-            allQueryMetrics.addAll(importResult.getQueryMetrics());
+            if (containsKey(discoveryCache, r.getQueryText())) {
+                log.debug("Importing RSS/ATOM feed from cache, url={}", r.getQueryText());
+                FeedDiscoveryInfo discoveryInfo = discoveryCache.get(r.getQueryText());
+                List<StagingPost> sampleEntries = discoveryInfo.getSampleEntries();
+                if (isNotEmpty(sampleEntries)) {
+                    q.forEach(queryDefinition -> {
+                        Set<StagingPost> importCopy = copySampleEntries(queryDefinition, sampleEntries);
+                        QueryMetrics queryMetrics = QueryMetrics.from(queryDefinition.getId(), new Date(), size(importCopy));
+                        ImportResult importResult = ImportResult.from(importCopy, singletonList(queryMetrics));
+                        allStagingPosts.addAll(importResult.getImportSet());
+                        allQueryMetrics.addAll(importResult.getQueryMetrics());
+                    });
+                }
+                latch.countDown();
+            } else if (isEmpty(discoveryCache)) {
+                ImportResult importResult = this.performImport(r, size(q), getArticlesResponseHandler(q, latch));
+                allStagingPosts.addAll(importResult.getImportSet());
+                allQueryMetrics.addAll(importResult.getQueryMetrics());
+            } else {
+                latch.countDown(); // result is not in cache, yet cache is present -> skip
+            }
             latch.countDown();
             if (latch.getCount() % 50 == 0) {
                 log.info("RSS import latch currently at {}: ", latch.getCount());
@@ -157,6 +177,20 @@ public class RssImporter implements Importer {
         log.info("RSS importer finished at {}", Instant.now());
 
         return ImportResult.from(allStagingPosts, allQueryMetrics);
+    }
+
+    private static <K> boolean containsKey(Map<K, ?> map, K key) {
+        return map != null && map.containsKey(key);
+    }
+
+    private static Set<StagingPost> copySampleEntries(QueryDefinition queryDefinition, List<StagingPost> sampleEntries) {
+        Set<StagingPost> copySet = new HashSet<>();
+        for (StagingPost s : sampleEntries) {
+            StagingPost copy = StagingPost.from(s, queryDefinition);
+            copySet.add(copy);
+        }
+
+        return copySet;
     }
 
     private boolean supportsQueryType(String queryType) {
@@ -228,7 +262,7 @@ public class RssImporter implements Importer {
         };
     }
 
-    private static Set<StagingPost> importArticleResponse(Long feedId, Long queryId, String query, String queryTitle, SyndFeed response, String username, Date importTimestamp) {
+    static Set<StagingPost> importArticleResponse(Long feedId, Long queryId, String query, String queryTitle, SyndFeed response, String username, Date importTimestamp) {
         Set<StagingPost> stagingPosts = new HashSet<>();
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");

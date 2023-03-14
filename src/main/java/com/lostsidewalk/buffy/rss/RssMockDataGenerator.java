@@ -22,12 +22,12 @@ class RssMockDataGenerator {
 
     SyndFeedResponse buildMockResponse(QueryDefinition q) {
         SyndFeedImpl mockResponse = new SyndFeedImpl();
-        mockResponse.setEntries(buildMockArticle(q, mockResponse));
+        mockResponse.setEntries(buildMockArticles(q, mockResponse));
 
         return SyndFeedResponse.from(mockResponse, 200, "OK");
     }
 
-    private List<SyndEntry> buildMockArticle(QueryDefinition q, SyndFeed parentFeed) {
+    private List<SyndEntry> buildMockArticles(QueryDefinition q, SyndFeed parentFeed) {
         Long feedId = q.getFeedId();
         SyndEntryImpl mockArticle = new SyndEntryImpl();
         mockArticle.setAuthor("test-author" + feedId);
