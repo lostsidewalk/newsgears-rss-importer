@@ -3,8 +3,12 @@ package com.lostsidewalk.buffy.rss;
 import com.lostsidewalk.buffy.discovery.FeedDiscoveryImageInfo;
 import com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo;
 import com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryException;
-import com.lostsidewalk.buffy.post.*;
-import com.rometools.rome.feed.synd.*;
+import com.lostsidewalk.buffy.post.ContentObject;
+import com.lostsidewalk.buffy.post.StagingPost;
+import com.rometools.rome.feed.synd.SyndCategory;
+import com.rometools.rome.feed.synd.SyndContent;
+import com.rometools.rome.feed.synd.SyndFeed;
+import com.rometools.rome.feed.synd.SyndImage;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +21,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryExceptionType.*;
@@ -26,8 +33,9 @@ import static java.lang.Math.min;
 import static java.net.InetAddress.getByName;
 import static java.net.URI.create;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static javax.xml.bind.DatatypeConverter.printHexBinary;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
 import static org.apache.commons.lang3.StringUtils.*;
 
@@ -196,13 +204,13 @@ public class RssDiscovery {
                         trimToLength(MANAGING_EDITOR_FIELD_NAME, feed.getManagingEditor(), 256),
                         feed.getPublishedDate(),
                         feed.getStyleSheet(),
-                        feed.getSupportedFeedTypes(),
+                        isNotEmpty(feed.getSupportedFeedTypes()) ? new ArrayList<>(feed.getSupportedFeedTypes()) : new ArrayList<>(),
                         trimToLength(WEB_MASTER_FIELD_NAME, feed.getWebMaster(), 256),
                         trimToLength(URI_FIELD_NAME, feed.getUri(), 1024),
-                        firstFiveCategories(feed.getCategories())
+                        new ArrayList<>(firstFiveCategories(feed.getCategories())
                                 .map(SyndCategory::getName)
                                 .map(n -> trimToLength(CATEGORIES_FIELD_NAME, n, 256))
-                                .collect(toList()),
+                                .collect(toSet())),
                         firstFiveEntries(importArticleResponse(null, null, url, null, feed, username, new Date()).stream().toList()),
                         // is upgradable
                         isUrlUpgradable
@@ -378,7 +386,7 @@ public class RssDiscovery {
         return l == null ? Stream.of() : l.subList(0, min(l.size(), 5)).stream();
     }
 
-    private static List<StagingPost> firstFiveEntries(List<StagingPost> l) {
-        return l == null ? List.of() : l.subList(0, min(l.size(), 5));
+    private static ArrayList<StagingPost> firstFiveEntries(List<StagingPost> l) {
+        return l == null ? new ArrayList<>() : new ArrayList<>(l.subList(0, min(l.size(), 5)));
     }
 }
