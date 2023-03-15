@@ -4,7 +4,6 @@ import com.lostsidewalk.buffy.discovery.FeedDiscoveryImageInfo;
 import com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo;
 import com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryException;
 import com.lostsidewalk.buffy.post.ContentObject;
-import com.lostsidewalk.buffy.post.StagingPost;
 import com.rometools.rome.feed.synd.SyndCategory;
 import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndFeed;
@@ -211,7 +210,7 @@ public class RssDiscovery {
                                 .map(SyndCategory::getName)
                                 .map(n -> trimToLength(CATEGORIES_FIELD_NAME, n, 256))
                                 .collect(toSet())),
-                        firstFiveEntries(importArticleResponse(null, null, url, null, feed, username, new Date()).stream().toList()),
+                        new ArrayList<>(importArticleResponse(null, null, url, null, feed, username, new Date())),
                         // is upgradable
                         isUrlUpgradable
                 );
@@ -384,9 +383,5 @@ public class RssDiscovery {
 
     private static Stream<SyndCategory> firstFiveCategories(List<SyndCategory> l) {
         return l == null ? Stream.of() : l.subList(0, min(l.size(), 5)).stream();
-    }
-
-    private static ArrayList<StagingPost> firstFiveEntries(List<StagingPost> l) {
-        return l == null ? new ArrayList<>() : new ArrayList<>(l.subList(0, min(l.size(), 5)));
     }
 }
