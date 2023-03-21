@@ -185,11 +185,15 @@ public class RssImporter implements Importer {
 
     private static Set<StagingPost> copySampleEntries(QueryDefinition queryDefinition, List<StagingPost> sampleEntries) {
         Set<StagingPost> copySet = new HashSet<>();
-        for (StagingPost s : sampleEntries) {
-            StagingPost copy = StagingPost.from(s, queryDefinition);
-            copySet.add(copy);
-        }
-
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            for (StagingPost s : sampleEntries) {
+                String objectSource = getObjectSource(s);
+                String postHash = computeHash(md, queryDefinition.getFeedId(), objectSource);
+                StagingPost copy = StagingPost.from(s, queryDefinition, postHash);
+                copySet.add(copy);
+            }
+        } catch (NoSuchAlgorithmException ignored) {}
         return copySet;
     }
 
@@ -309,10 +313,21 @@ public class RssImporter implements Importer {
     }
 
     private static String getObjectSource(SyndEntry e) {
+        return getObjectSource(e.getTitle(), ofNullable(e.getDescription()).map(SyndContent::getValue).orElse(EMPTY), e.getLink());
+    }
+
+    private static String getObjectSource(StagingPost s) {
+        return getObjectSource(
+                s.getPostTitle().getValue(),
+                ofNullable(s.getPostDesc()).map(ContentObject::getValue).orElse(EMPTY),
+                s.getPostUrl());
+    }
+
+    private static String getObjectSource(String title, String description, String link) {
         JsonObject objectSrc = new JsonObject();
-        objectSrc.addProperty("title", e.getTitle());
-        objectSrc.addProperty("description", ofNullable(e.getDescription()).map(SyndContent::getValue).orElse(EMPTY));
-        objectSrc.addProperty("link", e.getLink());
+        objectSrc.addProperty("title", title);
+        objectSrc.addProperty("description", description);
+        objectSrc.addProperty("link", link);
         return objectSrc.toString();
     }
 
