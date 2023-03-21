@@ -16,22 +16,23 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Authenticator;
 import java.net.HttpURLConnection;
+import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.zip.GZIPInputStream;
 
 import static com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryExceptionType.*;
 import static com.lostsidewalk.buffy.rss.RssImporter.importArticleResponse;
 import static java.lang.Math.min;
 import static java.net.InetAddress.getByName;
 import static java.net.URI.create;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toSet;
 import static javax.xml.bind.DatatypeConverter.printHexBinary;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
@@ -96,9 +97,11 @@ public class RssDiscovery {
             // setup the initial connection
             HttpURLConnection feedConnection = openFeedConnection(url);
             // add authentication, if any
-            boolean hasAuthenticationHeaders = addAuthenticationHeader(feedConnection, username, password);
+            boolean hasAuthenticationHeaders = addAuthenticator(feedConnection, username, password);
             // add the UA header
             feedConnection.setRequestProperty("User-Agent", userAgent);
+            // add the AE header
+            feedConnection.setRequestProperty("Accept-Encoding", "gzip");
             // add the cache control header
             addCacheControlHeader(feedConnection);
             // get the (initial) status response
@@ -125,9 +128,11 @@ public class RssDiscovery {
                 // open the redirect connection
                 feedConnection = openFeedConnection(redirectUrl);
                 // add authentication to the redirect, if any
-                addAuthenticationHeader(feedConnection, username, password);
+                addAuthenticator(feedConnection, username, password);
                 // add the UA header to the redirect
                 feedConnection.setRequestProperty("User-Agent", userAgent);
+                // add the AE header to the redirect
+                feedConnection.setRequestProperty("Accept-Encoding", "gzip");
                 // get the redirect status response
                 redirectStatusCode = getStatusCode(feedConnection);
                 // get the redirect status message
@@ -162,11 +167,13 @@ public class RssDiscovery {
                     // redirected HTTP call which resulted in success
                 } else {
                     boolean isRedirect = redirectStatusCode != null;
-                    boolean isRedirectSuccess = isRedirect && isSuccess(redirectStatusCode);
-                    boolean isRedirectHttp = isRedirect && "http".equalsIgnoreCase(create(redirectUrl).toURL().getProtocol());
-                    if (isRedirect && isRedirectSuccess && isRedirectHttp) {
-                        // attempt HTTPS
-                        isUrlUpgradable = isUrlUpgradable(redirectUrl, username, password, userAgent, depth);
+                    if (isRedirect) {
+                        boolean isRedirectSuccess = isSuccess(redirectStatusCode);
+                        boolean isRedirectHttp = "http".equalsIgnoreCase(create(redirectUrl).toURL().getProtocol());
+                        if (isRedirectSuccess && isRedirectHttp) {
+                            // attempt HTTPS
+                            isUrlUpgradable = isUrlUpgradable(redirectUrl, username, password, userAgent, depth);
+                        }
                     }
                 }
             } catch (Exception ignored) {
@@ -174,7 +181,13 @@ public class RssDiscovery {
             }
 
             try (InputStream is = feedConnection.getInputStream()) {
-                byte[] allBytes = is.readAllBytes();
+                InputStream toRead;
+                if (containsIgnoreCase(feedConnection.getContentEncoding(), "gzip")) {
+                    toRead = new GZIPInputStream(is);
+                } else {
+                    toRead = is;
+                }
+                byte[] allBytes = toRead.readAllBytes();
                 ByteArrayInputStream bais = new ByteArrayInputStream(allBytes);
                 XmlReader xmlReader = new XmlReader(bais);
                 SyndFeedInput input = new SyndFeedInput();
@@ -227,11 +240,14 @@ public class RssDiscovery {
         return (HttpURLConnection) feedUrl.openConnection();
     }
 
-    private static boolean addAuthenticationHeader(HttpURLConnection feedConnection, String username, String password) {
+    private static boolean addAuthenticator(HttpURLConnection feedConnection, String username, String password) {
         if (username != null && password != null) {
-            feedConnection.setRequestProperty("Authorization",
-                    "Basic " + new String(Base64.getEncoder().encode((username + ":" + password).getBytes(UTF_8)))
-            );
+            feedConnection.setAuthenticator(new Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(username, password.toCharArray());
+                }
+            });
             return true;
         }
 
