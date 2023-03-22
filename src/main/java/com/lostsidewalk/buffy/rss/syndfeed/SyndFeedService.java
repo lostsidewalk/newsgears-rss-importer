@@ -4,6 +4,7 @@ import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -18,6 +19,7 @@ import java.util.zip.GZIPInputStream;
 import static com.lostsidewalk.buffy.query.QueryMetrics.QueryExceptionType.*;
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 
+@Slf4j
 @Service
 @SuppressWarnings("unused")
 public class SyndFeedService {
@@ -70,12 +72,12 @@ public class SyndFeedService {
             // get the (initial) status message
             statusMessage = getStatusMessage(feedConnection);
             // if this is a redirect...
-            if (isPermanentRedirect(statusCode)) {
-                throw new SyndFeedException(url, statusCode, statusMessage, null, redirectStatusCode, null, PERMANENTLY_REDIRECTED);
-            }
-            if (isTemporaryRedirect(statusCode)) {
+            if (isRedirect(statusCode)) {
                 // get the redirect location URL
                 redirectUrl = feedConnection.getHeaderField("Location");
+                if (isPermanentRedirect(statusCode)) {
+                    log.warn("Feed is permanently redirected, url={}, redirectUrl={}", url, redirectUrl);
+                }
                 // check for unsecure redirect
                 boolean isUnsecureRedirect = "http".equalsIgnoreCase(feedConnection.getURL().getProtocol());
                 // if this is an unsecure redirect (no auth), but we have been instructed not to trust such redirects, bail
