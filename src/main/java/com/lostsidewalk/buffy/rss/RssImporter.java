@@ -2,6 +2,7 @@ package com.lostsidewalk.buffy.rss;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.lostsidewalk.buffy.Importer;
 import com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo;
@@ -143,7 +144,7 @@ public class RssImporter implements Importer {
         log.info("RSS import latch initialized to: {}", latch.getCount());
         uniqueQueryMap.forEach((r, q) -> rssThreadPool.submit(() -> {
             if (containsKey(discoveryCache, r.getQueryText())) {
-                log.debug("Importing RSS/ATOM feed from cache, url={}", r.getQueryText());
+                log.info("Importing RSS/ATOM feed from cache, url={}", r.getQueryText());
                 FeedDiscoveryInfo discoveryInfo = discoveryCache.get(r.getQueryText());
                 List<StagingPost> sampleEntries = discoveryInfo.getSampleEntries();
                 if (isNotEmpty(sampleEntries)) {
@@ -592,7 +593,8 @@ public class RssImporter implements Importer {
     }
 
     private static String getStringProperty(JsonObject obj, String propName) {
-        return obj != null && obj.has(propName) ? obj.get(propName).getAsString() : null;
+        JsonElement elem = obj != null && obj.has(propName) ? obj.get(propName) : null;
+        return (elem != null && !elem.isJsonNull()) ? elem.getAsString() : null;
     }
 
     @Override
