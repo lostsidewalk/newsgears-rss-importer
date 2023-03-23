@@ -81,12 +81,12 @@ public class RssDiscovery {
     }
 
     public static FeedDiscoveryInfo discoverUrl(String url, String username, String password, String userAgent) throws FeedDiscoveryException {
-        return discoverUrl(url, username, password, userAgent, false, 0);
+        return discoverUrl(url, username, password, userAgent, true, 0);
     }
 
 //    private static final String FEED_DISCOVERY_USER_AGENT = "Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed discovery process";
 
-    public static FeedDiscoveryInfo discoverUrl(String url, String username, String password, String userAgent, boolean followUnsecureRedirects, int depth) throws FeedDiscoveryException {
+    static FeedDiscoveryInfo discoverUrl(String url, String username, String password, String userAgent, boolean followUnsecureRedirects, int depth) throws FeedDiscoveryException {
         log.debug("Performing feed discovery for URL={}", url);
         Integer statusCode = null;
         String statusMessage = null;

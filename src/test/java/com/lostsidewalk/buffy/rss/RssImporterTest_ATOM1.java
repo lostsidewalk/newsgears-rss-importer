@@ -98,7 +98,7 @@ public class RssImporterTest_ATOM1 {
                     isNull(),
                     isNull(),
                     eq("Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of 1 users"),
-                    eq(false))
+                    eq(true))
                 ).thenReturn(syndFeedResponse);
             // carry out test
             ImportResult importResult = rssImporter.performImport(TEST_ATOM_QUERY, new ImportResponseCallback() {
@@ -176,7 +176,7 @@ public class RssImporterTest_ATOM1 {
                     isNull(),
                     isNull(),
                     eq("Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of 1 users"),
-                    eq(false))
+                    eq(true))
                 ).thenReturn(syndFeedResponse);
             rssImporter.doImport(singletonList(TEST_ATOM_QUERY), emptyMap());
         } catch (Exception e) {

@@ -582,7 +582,7 @@ public class RssImporter implements Importer {
                 try {
                     log.info("Fetching RSS feed from url={}", queryText);
                     String userAgent = String.format(RSS_ATOM_IMPORTER_USER_AGENT, subscriberCt);
-                    importResult = syndFeedResponseCallback.onSuccess(syndFeedService.fetch(queryText, feedUsername, feedPassword, userAgent, false));
+                    importResult = syndFeedResponseCallback.onSuccess(syndFeedService.fetch(queryText, feedUsername, feedPassword, userAgent, true));
                 } catch (SyndFeedException e) {
                     importResult = syndFeedResponseCallback.onFailure(e);
                 }
