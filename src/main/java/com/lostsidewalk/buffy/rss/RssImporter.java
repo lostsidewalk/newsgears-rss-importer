@@ -220,7 +220,6 @@ public class RssImporter implements Importer {
                     // convert the syndfeed response into a stream of staging posts for that query, and send them to the success agg. queue
                     Set<StagingPost> importedArticles = importArticleResponse(q.getFeedId(), q.getId(), q.getQueryText(), q.getQueryTitle(), response.getSyndFeed(), q.getUsername(), importTimestamp);
                     importSet.addAll(importedArticles);
-                    latch.countDown();
                     // update query metrics
                     queryMetrics.add(QueryMetrics.from(
                             q.getId(),
@@ -235,6 +234,7 @@ public class RssImporter implements Importer {
                     log.info("Import success, username={}, feedId={}, queryId={}, queryType={}, queryText={}, importCt={}",
                             q.getUsername(), q.getFeedId(), q.getId(), q.getQueryType(), q.getQueryText(), size(importedArticles));
                 }
+                latch.countDown();
 
                 return ImportResult.from(importSet, queryMetrics);
             }
@@ -255,11 +255,11 @@ public class RssImporter implements Importer {
                         new Date(), // import timestamp
                         0 // import ct
                     )).forEach(m -> {
-                        latch.countDown();
                         m.setErrorType(exception.exceptionType);
                         m.setErrorDetail(exception.getMessage());
                         queryMetrics.add(m);
                     });
+                latch.countDown();
 
                 return ImportResult.from(emptySet(), queryMetrics);
             }
