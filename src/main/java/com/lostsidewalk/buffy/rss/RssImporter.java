@@ -314,21 +314,35 @@ public class RssImporter implements Importer {
     }
 
     private static String getObjectSource(SyndEntry e) {
-        return getObjectSource(e.getTitle(), ofNullable(e.getDescription()).map(SyndContent::getValue).orElse(EMPTY), e.getLink());
+        return getObjectSource(
+                e.getTitle(),
+                ofNullable(e.getDescription()).map(SyndContent::getValue).orElse(EMPTY),
+                e.getLink(),
+                e.getPublishedDate(),
+                e.getUpdatedDate());
     }
 
     private static String getObjectSource(StagingPost s) {
         return getObjectSource(
                 s.getPostTitle().getValue(),
                 ofNullable(s.getPostDesc()).map(ContentObject::getValue).orElse(EMPTY),
-                s.getPostUrl());
+                s.getPostUrl(),
+                s.getPublishTimestamp(),
+                s.getLastUpdatedTimestamp());
     }
 
-    private static String getObjectSource(String title, String description, String link) {
+    private static String getObjectSource(String title, String description, String link, Date publishTimestamp, Date lastUpdatedTimestamp) {
         JsonObject objectSrc = new JsonObject();
         objectSrc.addProperty("title", title);
         objectSrc.addProperty("description", description);
         objectSrc.addProperty("link", link);
+        //
+        if (publishTimestamp != null) {
+            objectSrc.addProperty("published", publishTimestamp.getTime());
+        }
+        if (lastUpdatedTimestamp != null) {
+            objectSrc.addProperty("updated", lastUpdatedTimestamp.getTime());
+        }
         return objectSrc.toString();
     }
 
