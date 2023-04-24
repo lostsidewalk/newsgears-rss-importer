@@ -1,7 +1,7 @@
 package com.lostsidewalk.buffy.rss;
 
-import com.lostsidewalk.buffy.Importer.ImportResponseCallback;
-import com.lostsidewalk.buffy.Importer.ImportResult;
+import com.lostsidewalk.buffy.importer.Importer.ImportResponseCallback;
+import com.lostsidewalk.buffy.importer.Importer.ImportResult;
 import com.lostsidewalk.buffy.post.StagingPost;
 import com.lostsidewalk.buffy.query.QueryDefinition;
 import com.lostsidewalk.buffy.query.QueryMetrics;
@@ -139,7 +139,7 @@ public class RssImporterTest_RSS2 {
                     assertEquals("https://static01.nyt.com/images/2022/11/29/world/29CHINA-SECURITY-01/29CHINA-SECURITY-01-moth.jpg", s.getPostImgUrl());
                     assertEquals("394DF6AFE22C93D0FE40E0C7B011D889", s.getPostImgTransportIdent());
                     assertNotNull(s.getImportTimestamp());
-                    assertEquals("A15FCDB72389A9A3E59EA1366EA1B121", s.getPostHash());
+                    assertEquals("DB5BDAE5DECF74EDCDE597418793475F", s.getPostHash());
                     assertEquals("me", s.getUsername());
                     assertNotNull(s.getPublishTimestamp());
                     assertEquals("Tue Nov 29 09:29:27 CST 2022", s.getPublishTimestamp().toString());

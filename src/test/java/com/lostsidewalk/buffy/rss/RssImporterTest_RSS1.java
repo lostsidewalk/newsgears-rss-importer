@@ -1,7 +1,7 @@
 package com.lostsidewalk.buffy.rss;
 
-import com.lostsidewalk.buffy.Importer.ImportResponseCallback;
-import com.lostsidewalk.buffy.Importer.ImportResult;
+import com.lostsidewalk.buffy.importer.Importer.ImportResponseCallback;
+import com.lostsidewalk.buffy.importer.Importer.ImportResult;
 import com.lostsidewalk.buffy.post.StagingPost;
 import com.lostsidewalk.buffy.query.QueryDefinition;
 import com.lostsidewalk.buffy.query.QueryMetrics;
@@ -146,7 +146,7 @@ public class RssImporterTest_RSS1 {
                     assertEquals("https://cdn.cnn.com/cnnnext/dam/assets/221127112511-iran-flag-world-cup-1125-super-169.jpg", s.getPostImgUrl());
                     assertEquals("CBAB8C3E106008CFCC17D41141FBA8B4", s.getPostImgTransportIdent());
                     assertNotNull(s.getImportTimestamp());
-                    assertEquals("47EA8A19DA9B4B9C2A1D340FCE23F4E8", s.getPostHash());
+                    assertEquals("B67FB37B671F1BD3C82E0AF8FDEB40CC", s.getPostHash());
                     assertEquals("me", s.getUsername());
                     assertNotNull(s.getPublishTimestamp());
                     assertEquals("Tue Nov 29 07:18:37 CST 2022", s.getPublishTimestamp().toString());

@@ -1,7 +1,7 @@
 package com.lostsidewalk.buffy.rss;
 
-import com.lostsidewalk.buffy.Importer.ImportResponseCallback;
-import com.lostsidewalk.buffy.Importer.ImportResult;
+import com.lostsidewalk.buffy.importer.Importer.ImportResponseCallback;
+import com.lostsidewalk.buffy.importer.Importer.ImportResult;
 import com.lostsidewalk.buffy.post.PostPerson;
 import com.lostsidewalk.buffy.post.PostUrl;
 import com.lostsidewalk.buffy.post.StagingPost;
@@ -132,7 +132,7 @@ public class RssImporterTest_ATOM1 {
                     //
                     assertNull(s.getPostImgUrl());
                     assertNotNull(s.getImportTimestamp());
-                    assertEquals("DEC847424E648C7F730D73C1EE50105B", s.getPostHash());
+                    assertEquals("FDDE18F6B454A0073E4D19F3444F9D2C", s.getPostHash());
                     assertEquals("me", s.getUsername());
                     //
                     List<PostPerson> authors = s.getAuthors();

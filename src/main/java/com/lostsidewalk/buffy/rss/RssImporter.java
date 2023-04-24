@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.lostsidewalk.buffy.Importer;
+import com.lostsidewalk.buffy.importer.Importer;
 import com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo;
 import com.lostsidewalk.buffy.post.*;
 import com.lostsidewalk.buffy.query.QueryDefinition;
