@@ -4,11 +4,18 @@ plugins {
 }
 
 apply plugin: 'java'
+apply plugin: 'java-library'
+apply plugin: 'signing'
+
+group = 'com.lostsidewalk.newsgears'
+version = '0.5.0'
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(19)
     }
+    withJavadocJar()
+    withSourcesJar()
 }
 
 repositories {
@@ -18,7 +25,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.lostsidewalk.newsgears:newsgears-data:0.4'
+    implementation 'com.lostsidewalk.newsgears:newsgears-data:0.5.0'
 
     // SLF4J
     implementation 'org.slf4j:slf4j-api:2.0.5'
@@ -42,9 +49,9 @@ dependencies {
     // rome-modules
     implementation 'com.rometools:rome-modules:2.1.0'
     // jackson-core
-    implementation 'com.fasterxml.jackson.core:jackson-core:2.14.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.0'
     // jackson-databind
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
 
     // test
     testImplementation('org.springframework.boot:spring-boot-starter-test:3.0.4') {
@@ -62,13 +69,62 @@ dependencies {
 
 publishing {
     publications {
-        maven(MavenPublication) {
-            groupId = 'com.lostsidewalk.newsgears'
+        mavenJava(MavenPublication) {
             artifactId = 'newsgears-rss-importer'
-            version = '0.4'
-
             from components.java
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
+            pom {
+                name = 'newsgears-rss-importer'
+                description = 'This module contains the FeedGears RSS platform importer component.'
+                url = 'https://www.lostsidewalk.com/dev/newsgears-rss-importer'
+                licenses {
+                    license {
+                        name = 'GNU General Public License'
+                        url = 'https://www.gnu.org/licenses/gpl-3.0.en.html'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'elderscrollsjesus'
+                        name = 'Michael Harris'
+                        email = 'meh@lostsidewalk.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/lostsidewalk/newsgears-rss-importer.git'
+                    developerConnection = 'scm:git:https://github.com/lostsidewalk/newsgears-rss-importer.git'
+                    url = 'https://www.lostsidewalk.com/dev/newsgears-rss-importer'
+                }
+            }
         }
+    }
+    repositories {
+        maven {
+            def releasesRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/releases'
+            def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username = ossrhUsername
+                password = ossrhPassword
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
+javadoc {
+    if(JavaVersion.current().isJava9Compatible()) {
+        options.addBooleanOption('html5', true)
     }
 }
 

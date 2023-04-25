@@ -1,4 +1,5 @@
 /build/
-/out/
 .gradle
 .idea
+gradle.properties
+secret-keys.gpg
