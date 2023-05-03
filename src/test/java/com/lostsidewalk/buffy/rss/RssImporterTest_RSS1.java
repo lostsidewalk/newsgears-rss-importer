@@ -54,7 +54,7 @@ public class RssImporterTest_RSS1 {
     @Autowired
     RssImporter rssImporter;
 
-    static final QueryDefinition TEST_RSS_QUERY = QueryDefinition.from(668L, "me", "testQuery", "http://localhost/test.rss", "RSS", null);
+    static final QueryDefinition TEST_RSS_QUERY = QueryDefinition.from(668L, "me", "testQuery", "http://localhost/test.rss", "RSS", null, null);
 
     static final String TEST_RSS_RESPONSE =
             "<rss" +
@@ -153,7 +153,7 @@ public class RssImporterTest_RSS1 {
                     assertNull(s.getExpirationTimestamp());
                     assertFalse(s.isPublished());
 
-                    return ImportResult.from(emptySet(), singletonList(QueryMetrics.from(1L, new Date(), 1)));
+                    return ImportResult.from(emptySet(), singletonList(QueryMetrics.from(1L, new Date(), "A", 1)));
                 }
 
                 @Override

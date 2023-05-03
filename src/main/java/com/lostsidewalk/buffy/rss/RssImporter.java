@@ -147,15 +147,23 @@ public class RssImporter implements Importer {
                 log.info("Importing RSS/ATOM feed from cache, url={}", r.getQueryText());
                 FeedDiscoveryInfo discoveryInfo = discoveryCache.get(r.getQueryText());
                 List<StagingPost> sampleEntries = discoveryInfo.getSampleEntries();
-                if (isNotEmpty(sampleEntries)) {
-                    q.forEach(queryDefinition -> {
-                        Set<StagingPost> importCopy = copySampleEntries(queryDefinition, sampleEntries);
-                        QueryMetrics queryMetrics = QueryMetrics.from(queryDefinition.getId(), new Date(), size(importCopy));
-                        ImportResult importResult = ImportResult.from(importCopy, singletonList(queryMetrics));
-                        allStagingPosts.addAll(importResult.getImportSet());
-                        allQueryMetrics.addAll(importResult.getQueryMetrics());
-                    });
-                }
+                q.forEach(queryDefinition -> {
+                    Set<StagingPost> importCopy = copySampleEntries(queryDefinition, sampleEntries);
+                    QueryMetrics queryMetrics = QueryMetrics.from(
+                            queryDefinition.getId(),
+                            discoveryInfo.getHttpStatusCode(),
+                            discoveryInfo.getHttpStatusMessage(),
+                            discoveryInfo.getRedirectFeedUrl(),
+                            discoveryInfo.getRedirectHttpStatusCode(),
+                            discoveryInfo.getRedirectHttpStatusMessage(),
+                            new Date(),
+                            null,
+                            size(importCopy)
+                    );
+                    ImportResult importResult = ImportResult.from(importCopy, singletonList(queryMetrics));
+                    allStagingPosts.addAll(importResult.getImportSet());
+                    allQueryMetrics.addAll(importResult.getQueryMetrics());
+                });
                 latch.countDown();
             } else if (isEmpty(discoveryCache)) {
                 ImportResult importResult = this.performImport(r, size(q), getArticlesResponseHandler(q, latch));
@@ -186,15 +194,18 @@ public class RssImporter implements Importer {
 
     private static Set<StagingPost> copySampleEntries(QueryDefinition queryDefinition, List<StagingPost> sampleEntries) {
         Set<StagingPost> copySet = new HashSet<>();
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            for (StagingPost s : sampleEntries) {
-                String objectSource = getObjectSource(s);
-                String postHash = computeHash(md, queryDefinition.getFeedId(), objectSource);
-                StagingPost copy = StagingPost.from(s, queryDefinition, postHash);
-                copySet.add(copy);
+        if (isNotEmpty(sampleEntries)) {
+            try {
+                MessageDigest md = MessageDigest.getInstance("MD5");
+                for (StagingPost s : sampleEntries) {
+                    String objectSource = getObjectSource(s);
+                    String postHash = computeHash(md, queryDefinition.getFeedId(), objectSource);
+                    StagingPost copy = StagingPost.from(s, queryDefinition, postHash);
+                    copySet.add(copy);
+                }
+            } catch (NoSuchAlgorithmException ignored) {
             }
-        } catch (NoSuchAlgorithmException ignored) {}
+        }
         return copySet;
     }
 
@@ -230,6 +241,7 @@ public class RssImporter implements Importer {
                             response.getRedirectHttpStatusCode(),
                             response.getRedirectHttpStatusMessage(),
                             importTimestamp,
+                            q.getImportSchedule(),
                             size(importedArticles)
                         ));
                     log.info("Import success, username={}, feedId={}, queryId={}, queryType={}, queryText={}, importCt={}",
@@ -254,6 +266,7 @@ public class RssImporter implements Importer {
                         exception.redirectHttpStatusCode,
                         exception.redirectHttpStatusMessage,
                         new Date(), // import timestamp
+                        q.getImportSchedule(),
                         0 // import ct
                     )).forEach(m -> {
                         m.setErrorType(exception.exceptionType);

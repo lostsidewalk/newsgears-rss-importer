@@ -56,7 +56,7 @@ public class RssImporterTest_ATOM2 {
     @Autowired
     RssImporter rssImporter;
 
-    static final QueryDefinition TEST_ATOM_QUERY = QueryDefinition.from(667L, "me", "testQuery", "http://localhost/test.atom", "ATOM", null);
+    static final QueryDefinition TEST_ATOM_QUERY = QueryDefinition.from(667L, "me", "testQuery", "http://localhost/test.atom", "ATOM", null, null);
 
     static final String TEST_ATOM_RESPONSE =
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
@@ -144,7 +144,7 @@ public class RssImporterTest_ATOM2 {
                     assertNull(s.getExpirationTimestamp());
                     assertFalse(s.isPublished());
 
-                    return ImportResult.from(emptySet(), singletonList(QueryMetrics.from(1L, new Date(), 1)));
+                    return ImportResult.from(emptySet(), singletonList(QueryMetrics.from(1L, new Date(), "A", 1)));
                 }
 
                 @Override
