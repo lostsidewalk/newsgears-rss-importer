@@ -3,10 +3,10 @@ package com.lostsidewalk.buffy.rss;
 import com.lostsidewalk.buffy.importer.Importer.ImportResponseCallback;
 import com.lostsidewalk.buffy.importer.Importer.ImportResult;
 import com.lostsidewalk.buffy.post.StagingPost;
-import com.lostsidewalk.buffy.query.QueryDefinition;
-import com.lostsidewalk.buffy.query.QueryMetrics;
 import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService;
 import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService.SyndFeedResponse;
+import com.lostsidewalk.buffy.subscription.SubscriptionDefinition;
+import com.lostsidewalk.buffy.subscription.SubscriptionMetrics;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ public class RssImporterTest_RSS1 {
     Queue<Throwable> errorAggregator;
 
     @MockBean
-    Queue<QueryMetrics> queryMetricsAggregator;
+    Queue<SubscriptionMetrics> subscriptionMetricsAggregator;
 
     @MockBean
     RssMockDataGenerator rssMockDataGenerator;
@@ -54,7 +54,7 @@ public class RssImporterTest_RSS1 {
     @Autowired
     RssImporter rssImporter;
 
-    static final QueryDefinition TEST_RSS_QUERY = QueryDefinition.from(668L, "me", "testQuery", "http://localhost/test.rss", "RSS", null, null);
+    static final SubscriptionDefinition TEST_RSS_SUB = SubscriptionDefinition.from(668L, "me", "testQuery", "http://localhost/test.rss", "RSS", null, null);
 
     static final String TEST_RSS_RESPONSE =
             "<rss" +
@@ -120,21 +120,21 @@ public class RssImporterTest_RSS1 {
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
             when(this.syndFeedService.fetch(
-                    eq(TEST_RSS_QUERY.getQueryText()),
+                    eq(TEST_RSS_SUB.getUrl()),
                     isNull(),
                     isNull(),
                     eq("Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of 1 users"),
                     eq(true))
                 ).thenReturn(syndFeedResponse);
             // carry out test
-            ImportResult importResult = rssImporter.performImport(TEST_RSS_QUERY, new ImportResponseCallback() {
+            ImportResult importResult = rssImporter.performImport(TEST_RSS_SUB, new ImportResponseCallback() {
                 @Override
                 public ImportResult onSuccess(Set<StagingPost> set) {
                     assertNotNull(set);
                     assertEquals(1, set.size());
                     StagingPost s = set.iterator().next();
                     assertEquals("RssAtom", s.getImporterId());
-                    assertEquals(668L, s.getFeedId());
+                    assertEquals(668L, s.getQueueId());
                     assertEquals("http://localhost/test.rss", s.getImporterDesc());
                     assertNotNull(s.getPostTitle());
                     assertNull(s.getPostTitle().getType());
@@ -153,7 +153,7 @@ public class RssImporterTest_RSS1 {
                     assertNull(s.getExpirationTimestamp());
                     assertFalse(s.isPublished());
 
-                    return ImportResult.from(emptySet(), singletonList(QueryMetrics.from(1L, new Date(), "A", 1)));
+                    return ImportResult.from(emptySet(), singletonList(SubscriptionMetrics.from(1L, new Date(), "A", 1)));
                 }
 
                 @Override
@@ -163,7 +163,7 @@ public class RssImporterTest_RSS1 {
                 }
             });
             assertNotNull(importResult);
-            assertEquals(1, size(importResult.getQueryMetrics()));
+            assertEquals(1, size(importResult.getSubscriptionMetrics()));
         } catch (Exception e) {
             fail(e.getMessage());
         }
@@ -177,13 +177,13 @@ public class RssImporterTest_RSS1 {
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
             when(this.syndFeedService.fetch(
-                    eq(TEST_RSS_QUERY.getQueryText()),
+                    eq(TEST_RSS_SUB.getUrl()),
                     isNull(),
                     isNull(),
                     eq("Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of 1 users"),
                     eq(true))
                 ).thenReturn(syndFeedResponse);
-            rssImporter.doImport(singletonList(TEST_RSS_QUERY), emptyMap());
+            rssImporter.doImport(singletonList(TEST_RSS_SUB), emptyMap());
         } catch (Exception e) {
             fail(e.getMessage());
         }

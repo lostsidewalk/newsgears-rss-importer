@@ -16,7 +16,7 @@ import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.util.zip.GZIPInputStream;
 
-import static com.lostsidewalk.buffy.query.QueryMetrics.QueryExceptionType.*;
+import static com.lostsidewalk.buffy.subscription.SubscriptionMetrics.QueryExceptionType.*;
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 
 @Slf4j

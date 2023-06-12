@@ -1,7 +1,7 @@
 package com.lostsidewalk.buffy.rss;
 
-import com.lostsidewalk.buffy.query.QueryDefinition;
 import com.lostsidewalk.buffy.rss.syndfeed.SyndFeedService.SyndFeedResponse;
+import com.lostsidewalk.buffy.subscription.SubscriptionDefinition;
 import com.rometools.modules.mediarss.MediaEntryModuleImpl;
 import com.rometools.modules.mediarss.types.Metadata;
 import com.rometools.modules.mediarss.types.Thumbnail;
@@ -20,23 +20,23 @@ import static java.util.Collections.singletonList;
 @SuppressWarnings("unused")
 class RssMockDataGenerator {
 
-    SyndFeedResponse buildMockResponse(QueryDefinition q) {
+    SyndFeedResponse buildMockResponse(SubscriptionDefinition q) {
         SyndFeedImpl mockResponse = new SyndFeedImpl();
         mockResponse.setEntries(buildMockArticles(q, mockResponse));
 
         return SyndFeedResponse.from(mockResponse, 200, "OK");
     }
 
-    private List<SyndEntry> buildMockArticles(QueryDefinition q, SyndFeed parentFeed) {
-        Long feedId = q.getFeedId();
+    private List<SyndEntry> buildMockArticles(SubscriptionDefinition q, SyndFeed parentFeed) {
+        Long queueId = q.getQueueId();
         SyndEntryImpl mockArticle = new SyndEntryImpl();
-        mockArticle.setAuthor("test-author" + feedId);
-        mockArticle.setDescription(buildSyndContent("test-description" + feedId));
+        mockArticle.setAuthor("test-author" + queueId);
+        mockArticle.setDescription(buildSyndContent("test-description" + queueId));
         mockArticle.setSource(parentFeed);
         mockArticle.setPublishedDate(new Date());
-        mockArticle.setUri("test-url" + feedId);
+        mockArticle.setUri("test-url" + queueId);
         mockArticle.setModules(buildMediaModule());
-        mockArticle.setTitle("test-title" + feedId);
+        mockArticle.setTitle("test-title" + queueId);
 
         return singletonList(mockArticle);
     }

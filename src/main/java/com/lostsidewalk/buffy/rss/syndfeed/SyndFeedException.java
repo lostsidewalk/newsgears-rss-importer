@@ -1,6 +1,6 @@
 package com.lostsidewalk.buffy.rss.syndfeed;
 
-import com.lostsidewalk.buffy.query.QueryMetrics.QueryExceptionType;
+import com.lostsidewalk.buffy.subscription.SubscriptionMetrics.QueryExceptionType;
 import com.rometools.rome.io.ParsingFeedException;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -11,7 +11,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
-import static com.lostsidewalk.buffy.query.QueryMetrics.QueryExceptionType.*;
+import static com.lostsidewalk.buffy.subscription.SubscriptionMetrics.QueryExceptionType.*;
 
 public class SyndFeedException extends Exception {
 

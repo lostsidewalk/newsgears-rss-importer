@@ -8,7 +8,7 @@ apply plugin: 'java-library'
 apply plugin: 'signing'
 
 group = 'com.lostsidewalk.newsgears'
-version = '0.5.1'
+version = '0.5.2'
 
 java {
     toolchain {
@@ -25,7 +25,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.lostsidewalk.newsgears:newsgears-data:0.5.1'
+    implementation 'com.lostsidewalk.newsgears:newsgears-data:0.5.2'
 
     // SLF4J
     implementation 'org.slf4j:slf4j-api:2.0.5'
@@ -33,7 +33,7 @@ dependencies {
     // json
     implementation 'org.json:json:20230227'
     // spring-boot-starter
-    implementation 'org.springframework.boot:spring-boot-starter:3.0.4'
+    implementation 'org.springframework.boot:spring-boot-starter:3.1.0'
     // commons-collections4
     implementation 'org.apache.commons:commons-collections4:4.4'
     // commons-lang
@@ -51,10 +51,10 @@ dependencies {
     // jackson-core
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.0'
     // jackson-databind
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.1'
 
     // test
-    testImplementation('org.springframework.boot:spring-boot-starter-test:3.0.4') {
+    testImplementation('org.springframework.boot:spring-boot-starter-test:3.1.0') {
         exclude group: 'com.vaadin.external.google', module: 'android-json'
     }
     // junit-jupiter
