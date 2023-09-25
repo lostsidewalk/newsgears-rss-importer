@@ -46,6 +46,10 @@ import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
 import static org.apache.commons.lang3.StringUtils.*;
 
+/**
+ * This class represents an RSS importer that is responsible for fetching and importing RSS feeds.
+ * It provides functionality to import RSS feeds, parse them, and store the content for further processing.
+ */
 @Slf4j
 @Component
 public class RssImporter implements Importer {
@@ -89,8 +93,12 @@ public class RssImporter implements Importer {
 
     private ExecutorService rssThreadPool;
 
+    /**
+     * Initializes the RSS importer after construction.
+     * It sets up a thread pool for concurrent feed imports.
+     */
     @PostConstruct
-    public void postConstruct() {
+    protected void postConstruct() {
         //
         // banner message
         //
@@ -104,6 +112,13 @@ public class RssImporter implements Importer {
         this.rssThreadPool = newFixedThreadPool(processorCt, new ThreadFactoryBuilder().setNameFormat("rss-importer-%d").build());
     }
 
+    /**
+     * Imports RSS feeds based on the provided subscription definitions and feed discovery information.
+     *
+     * @param subscriptionDefinitions The list of subscription definitions to import.
+     * @param discoveryCache          A map containing feed discovery information.
+     * @return An ImportResult object containing imported staging posts and subscription metrics.
+     */
     @Override
     public ImportResult doImport(List<SubscriptionDefinition> subscriptionDefinitions, Map<String, FeedDiscoveryInfo> discoveryCache) {
         if (this.configProps.getDisabled()) {
@@ -554,8 +569,14 @@ public class RssImporter implements Importer {
         return printHexBinary(md.digest(serialize(String.format("%s:%s", queueId, objectSrc))));
     }
 
+    /**
+     * Designated query type value for RSS endpoints.
+     */
     public static final String RSS = "RSS";
 
+    /**
+     * Designated query type value of ATOM endpoints.
+     */
     public static final String ATOM = "ATOM";
 
     private static final String[] SUPPORTED_QUERY_TYPES = new String[] {
@@ -624,6 +645,10 @@ public class RssImporter implements Importer {
         return (elem != null && !elem.isJsonNull()) ? elem.getAsString() : null;
     }
 
+    /**
+     *
+     * @return
+     */
     @Override
     public String getImporterId() {
         return RSS_ATOM_IMPORTER_ID;

@@ -19,11 +19,16 @@ import java.util.zip.GZIPInputStream;
 import static com.lostsidewalk.buffy.subscription.SubscriptionMetrics.QueryExceptionType.*;
 import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 
-@Slf4j
+/**
+ * Service class for fetching and processing syndicated feeds.
+ */@Slf4j
 @Service
 @SuppressWarnings("unused")
 public class SyndFeedService {
 
+    /**
+     * A data class representing a syndicated feed response.
+     */
     @Data
     public static class SyndFeedResponse {
 
@@ -43,15 +48,45 @@ public class SyndFeedService {
             this.redirectHttpStatusMessage = redirectHttpStatusMessage;
         }
 
+        /**
+         * Create a SyndFeedResponse object with all parameters.
+         *
+         * @param syndFeed The syndicated feed.
+         * @param httpStatusCode The HTTP status code of the response.
+         * @param httpStatusMessage The HTTP status message.
+         * @param redirectUrl The redirect URL if applicable, otherwise null.
+         * @param redirectHttpStatusCode The HTTP status code of the redirect if applicable, otherwise null.
+         * @param redirectHttpStatusMessage The HTTP status message of the redirect if applicable, otherwise null.
+         * @return A SyndFeedResponse object.
+         */
         public static SyndFeedResponse from(SyndFeed syndFeed, int httpStatusCode, String httpStatusMessage, String redirectUrl, Integer redirectHttpStatusCode, String redirectHttpStatusMessage) {
             return new SyndFeedResponse(syndFeed, httpStatusCode, httpStatusMessage, redirectUrl, redirectHttpStatusCode, redirectHttpStatusMessage);
         }
 
+        /**
+         * Create a SyndFeedResponse object with basic parameters.
+         *
+         * @param syndFeed The syndicated feed.
+         * @param httpStatusCode The HTTP status code of the response.
+         * @param httpStatusMessage The HTTP status message.
+         * @return A SyndFeedResponse object.
+         */
         public static SyndFeedResponse from(SyndFeed syndFeed, int httpStatusCode, String httpStatusMessage) {
             return new SyndFeedResponse(syndFeed, httpStatusCode, httpStatusMessage, null, null, null);
         }
     }
 
+    /**
+     * Fetches a syndicated feed from the given URL with optional authentication and redirection handling.
+     *
+     * @param url The URL of the syndicated feed.
+     * @param username The username for authentication, or null if not needed.
+     * @param password The password for authentication, or null if not needed.
+     * @param userAgent The user agent to use for the request.
+     * @param followUnsecureRedirects Whether to follow unsecured redirects.
+     * @return A SyndFeedResponse object containing the syndicated feed and response information.
+     * @throws SyndFeedException If an error occurs during fetching or processing the feed.
+     */
     public SyndFeedResponse fetch(String url, String username, String password, String userAgent, boolean followUnsecureRedirects) throws SyndFeedException {
         Integer statusCode = null;
         String statusMessage = null;
@@ -167,27 +202,64 @@ public class SyndFeedService {
         return feedConnection.getResponseCode();
     }
 
+    /**
+     * Checks if the given HTTP status code represents a successful response (HTTP 200 OK).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return true if the status code represents success, false otherwise.
+     */
     public static boolean isSuccess(int statusCode) {
         return statusCode == HttpURLConnection.HTTP_OK;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a redirection response, including temporary redirects (HTTP 302 Found),
+     * permanent redirects (HTTP 301 Moved Permanently), and "See Other" (HTTP 303 See Other) responses.
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return true if the status code represents a redirection, false otherwise.
+     */
     public static boolean isRedirect(int statusCode) {
         return (isTemporaryRedirect(statusCode) || isPermanentRedirect(statusCode)
                 || statusCode == HttpURLConnection.HTTP_SEE_OTHER);
     }
 
+    /**
+     * Checks if the given HTTP status code represents a temporary redirect (HTTP 302 Found).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return true if the status code represents a temporary redirect, false otherwise.
+     */
     public static boolean isTemporaryRedirect(int statusCode) {
         return statusCode == HttpURLConnection.HTTP_MOVED_TEMP;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a permanent redirect (HTTP 301 Moved Permanently).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return true if the status code represents a permanent redirect, false otherwise.
+     */
     public static boolean isPermanentRedirect(int statusCode) {
         return statusCode == HttpURLConnection.HTTP_MOVED_PERM;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a client error response (4xx status codes).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return true if the status code represents a client error, false otherwise.
+     */
     public static boolean isClientError(int statusCode) {
         return statusCode >= HttpURLConnection.HTTP_BAD_REQUEST && statusCode < HttpURLConnection.HTTP_INTERNAL_ERROR;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a server error response (5xx status codes).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return true if the status code represents a server error, false otherwise.
+     */
     public static boolean isServerError(int statusCode) {
         return statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR;
     }

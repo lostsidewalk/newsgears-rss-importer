@@ -29,8 +29,10 @@ import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 import static com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryExceptionType.*;
+import static com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryExceptionType.HTTP_SERVER_ERROR;
 import static com.lostsidewalk.buffy.rss.RssImporter.importArticleResponse;
 import static java.lang.Math.min;
+import static java.net.HttpURLConnection.*;
 import static java.net.InetAddress.getByName;
 import static java.net.URI.create;
 import static java.util.stream.Collectors.toSet;
@@ -39,6 +41,10 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
 import static org.apache.commons.lang3.StringUtils.*;
 
+/**
+ * This class provides methods for discovering and parsing RSS feeds from URLs. It handles various HTTP status codes,
+ * redirects, and feed parsing errors.
+ */
 @Slf4j
 @Component
 public class RssDiscovery {
@@ -75,17 +81,45 @@ public class RssDiscovery {
 
     private static final String CATEGORIES_FIELD_NAME = "categories";
 
+    /**
+     * Discover an RSS feed from the given URL and user agent.
+     *
+     * @param url       The URL of the feed to discover.
+     * @param userAgent The user agent string to use for the HTTP request.
+     * @return A `FeedDiscoveryInfo` object containing information about the discovered feed.
+     * @throws FeedDiscoveryException If an error occurs during feed discovery.
+     */
     @SuppressWarnings("unused")
     public static FeedDiscoveryInfo discoverUrl(String url, String userAgent) throws FeedDiscoveryException {
         return discoverUrl(url, null, null, userAgent);
     }
 
+    /**
+     * Discover an RSS feed from the given URL with optional authentication credentials and user agent.
+     *
+     * @param url       The URL of the feed to discover.
+     * @param username  The username for HTTP authentication, or null for no authentication.
+     * @param password  The password for HTTP authentication, or null for no authentication.
+     * @param userAgent The user agent string to use for the HTTP request.
+     * @return A `FeedDiscoveryInfo` object containing information about the discovered feed.
+     * @throws FeedDiscoveryException If an error occurs during feed discovery.
+     */
     public static FeedDiscoveryInfo discoverUrl(String url, String username, String password, String userAgent) throws FeedDiscoveryException {
         return discoverUrl(url, username, password, userAgent, true, 0);
     }
 
-//    private static final String FEED_DISCOVERY_USER_AGENT = "Lost Sidewalk FeedGears RSS Aggregator v.0.3 feed discovery process";
-
+    /**
+     * Discover an RSS feed from the given URL with optional authentication credentials, user agent, and redirect settings.
+     *
+     * @param url                    The URL of the feed to discover.
+     * @param username               The username for HTTP authentication, or null for no authentication.
+     * @param password               The password for HTTP authentication, or null for no authentication.
+     * @param userAgent              The user agent string to use for the HTTP request.
+     * @param followUnsecureRedirects Whether to follow unsecure (HTTP to HTTPS) redirects.
+     * @param depth                  The depth of redirection (used to prevent infinite loops).
+     * @return A `FeedDiscoveryInfo` object containing information about the discovered feed.
+     * @throws FeedDiscoveryException If an error occurs during feed discovery.
+     */
     static FeedDiscoveryInfo discoverUrl(String url, String username, String password, String userAgent, boolean followUnsecureRedirects, int depth) throws FeedDiscoveryException {
         log.debug("Performing feed discovery for URL={}", url);
         Integer statusCode = null;
@@ -267,27 +301,63 @@ public class RssDiscovery {
         return feedConnection.getResponseMessage();
     }
 
+    /**
+     * Checks if the given HTTP status code represents a successful response (HTTP 200 OK).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return True if the status code indicates success, otherwise false.
+     */
     public static boolean isSuccess(int statusCode) {
-        return statusCode == HttpURLConnection.HTTP_OK;
+        return statusCode == HTTP_OK;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a redirect response (HTTP 3xx).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return True if the status code indicates a redirect, otherwise false.
+     */
     public static boolean isRedirect(int statusCode) {
-        return (isTermporaryRedirect(statusCode) || isPermanentRedirect(statusCode)
-                || statusCode == HttpURLConnection.HTTP_SEE_OTHER);
+        return (isTemporaryRedirect(statusCode) || isPermanentRedirect(statusCode)
+                || statusCode == HTTP_SEE_OTHER);
     }
 
-    public static boolean isTermporaryRedirect(int statusCode) {
-        return statusCode == HttpURLConnection.HTTP_MOVED_TEMP;
+    /**
+     * Checks if the given HTTP status code represents a temporary redirect (HTTP 302 Found).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return True if the status code indicates a temporary redirect, otherwise false.
+     */
+    public static boolean isTemporaryRedirect(int statusCode) {
+        return statusCode == HTTP_MOVED_TEMP;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a permanent redirect (HTTP 301 Moved Permanently).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return True if the status code indicates a permanent redirect, otherwise false.
+     */
     public static boolean isPermanentRedirect(int statusCode) {
-        return statusCode == HttpURLConnection.HTTP_MOVED_PERM;
+        return statusCode == HTTP_MOVED_PERM;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a client error response (HTTP 4xx).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return True if the status code indicates a client error, otherwise false.
+     */
     public static boolean isClientError(int statusCode) {
-        return statusCode >= HttpURLConnection.HTTP_BAD_REQUEST && statusCode < HttpURLConnection.HTTP_INTERNAL_ERROR;
+        return statusCode >= HTTP_BAD_REQUEST && statusCode < HttpURLConnection.HTTP_INTERNAL_ERROR;
     }
 
+    /**
+     * Checks if the given HTTP status code represents a server error response (HTTP 5xx).
+     *
+     * @param statusCode The HTTP status code to check.
+     * @return True if the status code indicates a server error, otherwise false.
+     */
     public static boolean isServerError(int statusCode) {
         return statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR;
     }
@@ -357,41 +427,6 @@ public class RssDiscovery {
         }
         return ContentObject.from(syndContent.getType(), syndContent.getValue());
     }
-
-//    private String collectForeignMarkup(SyndFeed feed) {
-//        List<Element> feedForeignMarkup = feed.getForeignMarkup();
-//        if (isNotEmpty(feedForeignMarkup)) {
-//            List<String> feedForeignMarkupStrs = feedForeignMarkup.stream()
-//                    .filter(e -> !KNOWN_FEED_FOREIGN_NAMESPACE_URIS.contains(e.getNamespaceURI()))
-//                    .map(Element::toString).toList();
-//        }
-//        Set<String> postForeignMarkup = new HashSet<>();
-//        firstFiveEntries(feed.getEntries())
-//                .filter(e -> isNotEmpty(e.getForeignMarkup()))
-//                .forEach(e -> postForeignMarkup.addAll(e.getForeignMarkup().stream()
-//                        .filter(elem -> !KNOWN_POST_FOREIGN_NAMESPACE_URIS.contains(elem.getNamespaceURI()))
-//                        .map(Element::toString)
-//                        .collect(toSet()))
-//                );
-//        return postForeignMarkup;
-//    }
-
-//    private static final Set<String> KNOWN_FEED_FOREIGN_NAMESPACE_URIS = new HashSet<>();
-//    static {
-//        KNOWN_FEED_FOREIGN_NAMESPACE_URIS.add("http://purl.org/rss/1.0/modules/syndication/"); // sy:*
-//        KNOWN_FEED_FOREIGN_NAMESPACE_URIS.add("http://a9.com/-/spec/opensearchrss/1.0/"); // openSearch:*
-//        KNOWN_FEED_FOREIGN_NAMESPACE_URIS.add("com-wordpress:feed-additions:1");
-//        KNOWN_FEED_FOREIGN_NAMESPACE_URIS.add("http://www.youtube.com/xml/schemas/2015"); // yt:*
-//    }
-//
-//    private static final Set<String> KNOWN_POST_FOREIGN_NAMESPACE_URIS = new HashSet<>();
-//    static {
-//        KNOWN_POST_FOREIGN_NAMESPACE_URIS.add("http://wellformedweb.org/CommentAPI/"); // wfw:*
-//        KNOWN_POST_FOREIGN_NAMESPACE_URIS.add("http://www.georss.org/georss"); // georss:*
-//        KNOWN_POST_FOREIGN_NAMESPACE_URIS.add("http://purl.org/syndication/thread/1.0"); // thr:*
-//        KNOWN_POST_FOREIGN_NAMESPACE_URIS.add("com-wordpress:feed-additions:1");
-//        KNOWN_POST_FOREIGN_NAMESPACE_URIS.add("http://www.youtube.com/xml/schemas/2015"); // yt:*
-//    }
 
     private static String computeThumbnailHash(MessageDigest md, String feedImgUrl) {
         return isNotBlank(feedImgUrl) ? printHexBinary(md.digest(serialize(feedImgUrl))) : null;
