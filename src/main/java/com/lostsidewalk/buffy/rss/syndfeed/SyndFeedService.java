@@ -27,6 +27,12 @@ import static org.apache.commons.lang3.StringUtils.containsIgnoreCase;
 public class SyndFeedService {
 
     /**
+     * Default constructor; initializes the object.
+     */
+    SyndFeedService() {
+         super();
+     }
+    /**
      * A data class representing a syndicated feed response.
      */
     @Data

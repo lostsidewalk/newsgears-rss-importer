@@ -82,6 +82,12 @@ public class RssDiscovery {
     private static final String CATEGORIES_FIELD_NAME = "categories";
 
     /**
+     * Default constructor; initializes the object.
+     */
+    RssDiscovery() {
+        super();
+    }
+    /**
      * Discover an RSS feed from the given URL and user agent.
      *
      * @param url       The URL of the feed to discover.

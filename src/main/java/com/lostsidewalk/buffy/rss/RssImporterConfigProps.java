@@ -16,6 +16,13 @@ public class RssImporterConfigProps {
     private boolean importMockData;
 
     /**
+     * Default constructor; initializes the object.
+     */
+    RssImporterConfigProps() {
+        super();
+    }
+
+    /**
      * Get the value of the 'disabled' property.
      *
      * @return True if RSS importing is disabled, otherwise false.

@@ -56,6 +56,13 @@ public class RssImporter implements Importer {
 
     private static final Gson GSON = new Gson();
 
+    /**
+     * Default constructor; initializes the object.
+     */
+    RssImporter() {
+        super();
+    }
+
     @Data
     static class RssQuery {
 
@@ -646,8 +653,9 @@ public class RssImporter implements Importer {
     }
 
     /**
+     * Gets the unique identifier of the RSS importer.
      *
-     * @return
+     * @return The importer identifier.
      */
     @Override
     public String getImporterId() {
