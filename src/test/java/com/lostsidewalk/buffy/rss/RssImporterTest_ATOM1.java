@@ -11,6 +11,7 @@ import com.lostsidewalk.buffy.subscription.SubscriptionDefinition;
 import com.lostsidewalk.buffy.subscription.SubscriptionMetrics;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -31,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 
+@SuppressWarnings("CallToDateToString")
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 @SpringBootTest
 @ContextConfiguration(classes = {RssImporter.class, RssImporterConfigProps.class})
@@ -93,7 +96,7 @@ public class RssImporterTest_ATOM1 {
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
             // String url, String username, String password, String userAgent, boolean followUnsecureRedirects
-            when(this.syndFeedService.fetch(
+            when(SyndFeedService.fetch(
                     eq(TEST_ATOM_SUBSCRIPTION.getUrl()),
                     isNull(),
                     isNull(),
@@ -101,41 +104,41 @@ public class RssImporterTest_ATOM1 {
                     eq(true))
                 ).thenReturn(syndFeedResponse);
             // carry out test
-            ImportResult importResult = rssImporter.performImport(TEST_ATOM_SUBSCRIPTION, new ImportResponseCallback() {
+            ImportResult importResult = RssImporter.performImport(TEST_ATOM_SUBSCRIPTION, new ImportResponseCallback() {
                 @Override
                 public ImportResult onSuccess(Set<StagingPost> set) {
                     assertNotNull(set);
                     assertEquals(1, set.size());
-                    StagingPost s = set.iterator().next();
-                    assertEquals("RssAtom", s.getImporterId());
-                    assertEquals(666L, s.getQueueId());
-                    assertEquals("http://localhost/test.atom", s.getImporterDesc());
+                    StagingPost stagingPost = set.iterator().next();
+                    assertEquals("RssAtom", stagingPost.getImporterId());
+                    assertEquals(666L, stagingPost.getQueueId());
+                    assertEquals("http://localhost/test.atom", stagingPost.getImporterDesc());
                     //
-                    assertNotNull(s.getPostTitle());
-                    assertEquals("text", s.getPostTitle().getType());
-                    assertEquals("URLs don’t belong in <meta> elements", s.getPostTitle().getValue());
+                    assertNotNull(stagingPost.getPostTitle());
+                    assertEquals("text", stagingPost.getPostTitle().getType());
+                    assertEquals("URLs don’t belong in <meta> elements", stagingPost.getPostTitle().getValue());
                     //
-                    assertNull(s.getPostDesc());
+                    assertNull(stagingPost.getPostDesc());
                     //
-                    assertNotNull(s.getPostContents());
-                    assertEquals(1, s.getPostContents().size());
-                    assertEquals("text/html", s.getPostContents().get(0).getType());
+                    assertNotNull(stagingPost.getPostContents());
+                    assertEquals(1, stagingPost.getPostContents().size());
+                    assertEquals("text/html", stagingPost.getPostContents().get(0).getType());
                     assertEquals("<!-- SC_OFF --><div class=\"md\"><h1><a href=\"/r/java\">/r/java</a> is not for programming help or learning Java</h1> <ul> <li><strong>Programming related questions</strong> do not belong here. They belong in <strong><a href=\"/r/javahelp\">/r/javahelp</a></strong>. </li> <li><strong>Learning related questions</strong> belong in <strong><a href=\"/r/learnjava\">/r/learnjava</a></strong></li> </ul> <p>Such posts will be removed.</p> <p><strong>To the community willing to help:</strong></p> <p>Instead of immediately jumping in and helping, please <strong>direct the poster to the appropriate subreddit</strong> and <strong>report the post</strong>.</p> </div><!-- SC_ON --> &#32; submitted by &#32; <a href=\"https://old.reddit.com/user/desrtfx\"> /u/desrtfx </a> <br/> <span><a href=\"https://old.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/\">[link]</a></span> &#32; <span><a href=\"https://old.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/\">[comments]</a></span>",
-                            s.getPostContents().get(0).getValue()
+                            stagingPost.getPostContents().get(0).getValue()
                     );
                     //
-                    assertEquals("https://old.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/", s.getPostUrl());
+                    assertEquals("https://old.reddit.com/r/java/comments/j7h9er/psarjava_is_not_for_programming_help_learning/", stagingPost.getPostUrl());
                     //
-                    List<PostUrl> postUrls = s.getPostUrls();
+                    List<PostUrl> postUrls = stagingPost.getPostUrls();
                     assertNotNull(postUrls);
                     assertEquals(0, postUrls.size());
                     //
-                    assertNull(s.getPostImgUrl());
-                    assertNotNull(s.getImportTimestamp());
-                    assertEquals("FDDE18F6B454A0073E4D19F3444F9D2C", s.getPostHash());
-                    assertEquals("me", s.getUsername());
+                    assertNull(stagingPost.getPostImgUrl());
+                    assertNotNull(stagingPost.getImportTimestamp());
+                    assertEquals("FDDE18F6B454A0073E4D19F3444F9D2C", stagingPost.getPostHash());
+                    assertEquals("me", stagingPost.getUsername());
                     //
-                    List<PostPerson> authors = s.getAuthors();
+                    List<PostPerson> authors = stagingPost.getAuthors();
                     assertNotNull(authors);
                     assertEquals(1, authors.size());
                     PostPerson author = authors.get(0);
@@ -143,10 +146,10 @@ public class RssImporterTest_ATOM1 {
                     assertNull(author.getEmail());
                     assertEquals("https://old.reddit.com/user/desrtfx", author.getUri());
                     //
-                    assertNotNull(s.getPublishTimestamp());
-                    assertEquals("Thu Oct 08 12:21:51 CDT 2020", s.getPublishTimestamp().toString());
-                    assertNull(s.getExpirationTimestamp());
-                    assertFalse(s.isPublished());
+                    assertNotNull(stagingPost.getPublishTimestamp());
+                    assertEquals("Thu Oct 08 12:21:51 CDT 2020", stagingPost.getPublishTimestamp().toString());
+                    assertNull(stagingPost.getExpirationTimestamp());
+                    assertFalse(stagingPost.isPublished());
 
                     return ImportResult.from(emptySet(), singletonList(SubscriptionMetrics.from(1L, new Date(), "A", 1)));
                 }
@@ -171,7 +174,7 @@ public class RssImporterTest_ATOM1 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(this.syndFeedService.fetch(
+            when(SyndFeedService.fetch(
                     eq(TEST_ATOM_SUBSCRIPTION.getUrl()),
                     isNull(),
                     isNull(),
@@ -182,5 +185,17 @@ public class RssImporterTest_ATOM1 {
         } catch (Exception e) {
             fail(e.getMessage());
         }
+    }
+
+    @Override
+    public String toString() {
+        return "RssImporterTest_ATOM1{" +
+                "successAggregator=" + successAggregator +
+                ", errorAggregator=" + errorAggregator +
+                ", subscriptionMetricsAggregator=" + subscriptionMetricsAggregator +
+                ", rssMockDataGenerator=" + rssMockDataGenerator +
+                ", syndFeedService=" + syndFeedService +
+                ", rssImporter=" + rssImporter +
+                '}';
     }
 }

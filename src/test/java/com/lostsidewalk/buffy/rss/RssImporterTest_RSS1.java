@@ -9,6 +9,7 @@ import com.lostsidewalk.buffy.subscription.SubscriptionDefinition;
 import com.lostsidewalk.buffy.subscription.SubscriptionMetrics;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,9 +29,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 
+@SuppressWarnings("CallToDateToString")
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 @SpringBootTest
-@ContextConfiguration(classes = {RssImporter.class})
+@ContextConfiguration(classes = RssImporter.class)
 public class RssImporterTest_RSS1 {
 
     @MockBean
@@ -119,7 +122,7 @@ public class RssImporterTest_RSS1 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(this.syndFeedService.fetch(
+            when(SyndFeedService.fetch(
                     eq(TEST_RSS_SUB.getUrl()),
                     isNull(),
                     isNull(),
@@ -127,31 +130,31 @@ public class RssImporterTest_RSS1 {
                     eq(true))
                 ).thenReturn(syndFeedResponse);
             // carry out test
-            ImportResult importResult = rssImporter.performImport(TEST_RSS_SUB, new ImportResponseCallback() {
+            ImportResult importResult = RssImporter.performImport(TEST_RSS_SUB, new ImportResponseCallback() {
                 @Override
                 public ImportResult onSuccess(Set<StagingPost> set) {
                     assertNotNull(set);
                     assertEquals(1, set.size());
-                    StagingPost s = set.iterator().next();
-                    assertEquals("RssAtom", s.getImporterId());
-                    assertEquals(668L, s.getQueueId());
-                    assertEquals("http://localhost/test.rss", s.getImporterDesc());
-                    assertNotNull(s.getPostTitle());
-                    assertNull(s.getPostTitle().getType());
-                    assertEquals("     US Soccer's attempt to highlight the struggles of women protestors inside the Islamic Republic may have backfired    ", s.getPostTitle().getValue());
-                    assertNotNull(s.getPostDesc());
-                    assertEquals("text/html", s.getPostDesc().getType());
-                    assertEquals("     • Iran threatened families of national soccer team, according to security source • US to play Iran at 2 p.m. ET in politically charged World Cup match    ", s.getPostDesc().getValue());
-                    assertEquals("https://www.cnn.com/2022/11/28/world/iran-us-soccer-world-cup-analysis-intl-spt/index.html", s.getPostUrl());
-                    assertEquals("https://cdn.cnn.com/cnnnext/dam/assets/221127112511-iran-flag-world-cup-1125-super-169.jpg", s.getPostImgUrl());
-                    assertEquals("CBAB8C3E106008CFCC17D41141FBA8B4", s.getPostImgTransportIdent());
-                    assertNotNull(s.getImportTimestamp());
-                    assertEquals("B67FB37B671F1BD3C82E0AF8FDEB40CC", s.getPostHash());
-                    assertEquals("me", s.getUsername());
-                    assertNotNull(s.getPublishTimestamp());
-                    assertEquals("Tue Nov 29 07:18:37 CST 2022", s.getPublishTimestamp().toString());
-                    assertNull(s.getExpirationTimestamp());
-                    assertFalse(s.isPublished());
+                    StagingPost stagingPost = set.iterator().next();
+                    assertEquals("RssAtom", stagingPost.getImporterId());
+                    assertEquals(668L, stagingPost.getQueueId());
+                    assertEquals("http://localhost/test.rss", stagingPost.getImporterDesc());
+                    assertNotNull(stagingPost.getPostTitle());
+                    assertNull(stagingPost.getPostTitle().getType());
+                    assertEquals("     US Soccer's attempt to highlight the struggles of women protestors inside the Islamic Republic may have backfired    ", stagingPost.getPostTitle().getValue());
+                    assertNotNull(stagingPost.getPostDesc());
+                    assertEquals("text/html", stagingPost.getPostDesc().getType());
+                    assertEquals("     • Iran threatened families of national soccer team, according to security source • US to play Iran at 2 p.m. ET in politically charged World Cup match    ", stagingPost.getPostDesc().getValue());
+                    assertEquals("https://www.cnn.com/2022/11/28/world/iran-us-soccer-world-cup-analysis-intl-spt/index.html", stagingPost.getPostUrl());
+                    assertEquals("https://cdn.cnn.com/cnnnext/dam/assets/221127112511-iran-flag-world-cup-1125-super-169.jpg", stagingPost.getPostImgUrl());
+                    assertEquals("CBAB8C3E106008CFCC17D41141FBA8B4", stagingPost.getPostImgTransportIdent());
+                    assertNotNull(stagingPost.getImportTimestamp());
+                    assertEquals("B67FB37B671F1BD3C82E0AF8FDEB40CC", stagingPost.getPostHash());
+                    assertEquals("me", stagingPost.getUsername());
+                    assertNotNull(stagingPost.getPublishTimestamp());
+                    assertEquals("Tue Nov 29 07:18:37 CST 2022", stagingPost.getPublishTimestamp().toString());
+                    assertNull(stagingPost.getExpirationTimestamp());
+                    assertFalse(stagingPost.isPublished());
 
                     return ImportResult.from(emptySet(), singletonList(SubscriptionMetrics.from(1L, new Date(), "A", 1)));
                 }
@@ -176,7 +179,7 @@ public class RssImporterTest_RSS1 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_RSS_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(this.syndFeedService.fetch(
+            when(SyndFeedService.fetch(
                     eq(TEST_RSS_SUB.getUrl()),
                     isNull(),
                     isNull(),
@@ -187,5 +190,18 @@ public class RssImporterTest_RSS1 {
         } catch (Exception e) {
             fail(e.getMessage());
         }
+    }
+
+    @Override
+    public String toString() {
+        return "RssImporterTest_RSS1{" +
+                "configProps=" + configProps +
+                ", successAggregator=" + successAggregator +
+                ", errorAggregator=" + errorAggregator +
+                ", subscriptionMetricsAggregator=" + subscriptionMetricsAggregator +
+                ", rssMockDataGenerator=" + rssMockDataGenerator +
+                ", syndFeedService=" + syndFeedService +
+                ", rssImporter=" + rssImporter +
+                '}';
     }
 }

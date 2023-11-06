@@ -1,6 +1,7 @@
 package com.lostsidewalk.buffy.rss.syndfeed;
 
 import com.rometools.rome.feed.synd.SyndFeed;
+import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import lombok.Data;
@@ -30,8 +31,7 @@ public class SyndFeedService {
      * Default constructor; initializes the object.
      */
     SyndFeedService() {
-         super();
-     }
+    }
     /**
      * A data class representing a syndicated feed response.
      */
@@ -93,7 +93,7 @@ public class SyndFeedService {
      * @return A SyndFeedResponse object containing the syndicated feed and response information.
      * @throws SyndFeedException If an error occurs during fetching or processing the feed.
      */
-    public SyndFeedResponse fetch(String url, String username, String password, String userAgent, boolean followUnsecureRedirects) throws SyndFeedException {
+    public static SyndFeedResponse fetch(String url, String username, String password, String userAgent, boolean followUnsecureRedirects) throws SyndFeedException {
         Integer statusCode = null;
         String statusMessage = null;
         String redirectUrl = null;
@@ -164,6 +164,7 @@ public class SyndFeedService {
                     toRead = is;
                 }
                 byte[] allBytes = toRead.readAllBytes();
+                toRead.close();
                 ByteArrayInputStream bais = new ByteArrayInputStream(allBytes);
                 XmlReader xmlReader = new XmlReader(bais);
                 SyndFeedInput input = new SyndFeedInput();
@@ -171,11 +172,12 @@ public class SyndFeedService {
                 SyndFeed feed = input.build(xmlReader);
                 return SyndFeedResponse.from(feed, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage);
             }
-        } catch (Exception e) {
+        } catch (FeedException | IOException | IllegalArgumentException e) {
             throw new SyndFeedException(url, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage, e);
         }
     }
 
+    @SuppressWarnings("OverlyBroadThrowsClause") // MalformedURLException extends IOException
     private static HttpURLConnection openFeedConnection(String url) throws IOException {
         URL feedUrl = new URL(url);
         return (HttpURLConnection) feedUrl.openConnection();

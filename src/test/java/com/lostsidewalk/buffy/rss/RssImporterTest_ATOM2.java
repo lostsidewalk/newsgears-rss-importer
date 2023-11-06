@@ -10,6 +10,7 @@ import com.lostsidewalk.buffy.subscription.SubscriptionDefinition;
 import com.lostsidewalk.buffy.subscription.SubscriptionMetrics;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,9 +31,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 
+@SuppressWarnings("CallToDateToString")
+@Slf4j
 @ExtendWith(MockitoExtension.class)
 @SpringBootTest
-@ContextConfiguration(classes = {RssImporter.class})
+@ContextConfiguration(classes = RssImporter.class)
 public class RssImporterTest_ATOM2 {
 
     @MockBean
@@ -93,7 +96,7 @@ public class RssImporterTest_ATOM2 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(this.syndFeedService.fetch(
+            when(SyndFeedService.fetch(
                     eq(TEST_ATOM_SUB.getUrl()),
                     isNull(),
                     isNull(),
@@ -101,48 +104,48 @@ public class RssImporterTest_ATOM2 {
                     eq(true))
                 ).thenReturn(syndFeedResponse);
             // carry out test
-            ImportResult importResult = rssImporter.performImport(TEST_ATOM_SUB, new ImportResponseCallback() {
+            ImportResult importResult = RssImporter.performImport(TEST_ATOM_SUB, new ImportResponseCallback() {
                 @Override
                 public ImportResult onSuccess(Set<StagingPost> set) {
                     assertNotNull(set);
                     assertEquals(1, set.size());
-                    StagingPost s = set.iterator().next();
-                    assertEquals("RssAtom", s.getImporterId());
-                    assertEquals(667L, s.getQueueId());
-                    assertEquals("http://localhost/test.atom", s.getImporterDesc());
-                    assertNotNull(s.getPostTitle());
-                    assertEquals("text", s.getPostTitle().getType());
-                    assertEquals("Announcement: Official r/milf discord", s.getPostTitle().getValue());
+                    StagingPost stagingPost = set.iterator().next();
+                    assertEquals("RssAtom", stagingPost.getImporterId());
+                    assertEquals(667L, stagingPost.getQueueId());
+                    assertEquals("http://localhost/test.atom", stagingPost.getImporterDesc());
+                    assertNotNull(stagingPost.getPostTitle());
+                    assertEquals("text", stagingPost.getPostTitle().getType());
+                    assertEquals("Announcement: Official r/milf discord", stagingPost.getPostTitle().getValue());
                     //
-                    assertNull(s.getPostDesc());
+                    assertNull(stagingPost.getPostDesc());
                     //
-                    assertNotNull(s.getPostContents());
-                    assertEquals(1, s.getPostContents().size());
-                    assertEquals("text/html", s.getPostContents().get(0).getType());
+                    assertNotNull(stagingPost.getPostContents());
+                    assertEquals(1, stagingPost.getPostContents().size());
+                    assertEquals("text/html", stagingPost.getPostContents().get(0).getType());
                     assertEquals("<table> <tr><td> <a href=\"https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/\"> <img src=\"https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&amp;crop=smart&amp;auto=webp&amp;s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e\" alt=\"Announcement: Official r/milf discord\" title=\"Announcement: Official r/milf discord\" /> </a> </td><td> &#32; submitted by &#32; <a href=\"https://old.reddit.com/user/Pissmittens\"> /u/Pissmittens </a> <br/> <span><a href=\"https://discord.gg/M7MPQyZPfR\">[link]</a></span> &#32; <span><a href=\"https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/\">[comments]</a></span> </td></tr></table>",
-                            s.getPostContents().get(0).getValue());
+                            stagingPost.getPostContents().get(0).getValue());
                     //
-                    assertEquals("https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/", s.getPostUrl());
+                    assertEquals("https://old.reddit.com/r/milf/comments/yszhsp/announcement_official_rmilf_discord/", stagingPost.getPostUrl());
                     //
-                    List<PostUrl> postUrls = s.getPostUrls();
+                    List<PostUrl> postUrls = stagingPost.getPostUrls();
                     assertNotNull(postUrls);
                     assertEquals(0, postUrls.size());
                     //
-                    assertEquals("https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&crop=smart&auto=webp&s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e", s.getPostImgUrl());
-                    assertNotNull(s.getImportTimestamp());
-                    assertEquals("95F77180BE69B511EBBFA614D0007870", s.getPostHash());
-                    assertEquals("me", s.getUsername());
+                    assertEquals("https://external-preview.redd.it/MB4ENdAYnVeh73R-rB3g7AaNIApDyShCt6nbxK2J1dE.jpg?width=216&crop=smart&auto=webp&s=72e95ec50ab5e077e0916b299df29bda1bbb1f2e", stagingPost.getPostImgUrl());
+                    assertNotNull(stagingPost.getImportTimestamp());
+                    assertEquals("95F77180BE69B511EBBFA614D0007870", stagingPost.getPostHash());
+                    assertEquals("me", stagingPost.getUsername());
                     //
-                    List<String> postCategories = s.getPostCategories();
+                    List<String> postCategories = stagingPost.getPostCategories();
                     assertNotNull(postCategories);
                     assertEquals(1, postCategories.size());
                     String postCategory = postCategories.get(0);
                     assertEquals("milf", postCategory);
                     //
-                    assertNotNull(s.getPublishTimestamp());
-                    assertEquals("Sat Nov 12 01:16:52 CST 2022", s.getPublishTimestamp().toString());
-                    assertNull(s.getExpirationTimestamp());
-                    assertFalse(s.isPublished());
+                    assertNotNull(stagingPost.getPublishTimestamp());
+                    assertEquals("Sat Nov 12 01:16:52 CST 2022", stagingPost.getPublishTimestamp().toString());
+                    assertNull(stagingPost.getExpirationTimestamp());
+                    assertFalse(stagingPost.isPublished());
 
                     return ImportResult.from(emptySet(), singletonList(SubscriptionMetrics.from(1L, new Date(), "A", 1)));
                 }
@@ -167,7 +170,7 @@ public class RssImporterTest_ATOM2 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(this.syndFeedService.fetch(
+            when(SyndFeedService.fetch(
                     eq(TEST_ATOM_SUB.getUrl()),
                     isNull(),
                     isNull(),
@@ -178,5 +181,18 @@ public class RssImporterTest_ATOM2 {
         } catch (Exception e) {
             fail(e.getMessage());
         }
+    }
+
+    @Override
+    public String toString() {
+        return "RssImporterTest_ATOM2{" +
+                "configProps=" + configProps +
+                ", successAggregator=" + successAggregator +
+                ", errorAggregator=" + errorAggregator +
+                ", subscriptionMetricsAggregator=" + subscriptionMetricsAggregator +
+                ", rssMockDataGenerator=" + rssMockDataGenerator +
+                ", syndFeedService=" + syndFeedService +
+                ", rssImporter=" + rssImporter +
+                '}';
     }
 }

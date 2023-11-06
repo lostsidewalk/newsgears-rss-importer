@@ -8,6 +8,7 @@ import com.rometools.rome.feed.synd.SyndCategory;
 import com.rometools.rome.feed.synd.SyndContent;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.feed.synd.SyndImage;
+import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
 import lombok.extern.slf4j.Slf4j;
@@ -16,10 +17,7 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Authenticator;
-import java.net.HttpURLConnection;
-import java.net.PasswordAuthentication;
-import java.net.URL;
+import java.net.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -85,7 +83,6 @@ public class RssDiscovery {
      * Default constructor; initializes the object.
      */
     RssDiscovery() {
-        super();
     }
     /**
      * Discover an RSS feed from the given URL and user agent.
@@ -216,7 +213,7 @@ public class RssDiscovery {
                         }
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (MalformedURLException ignored) {
                 // not upgradable
             }
 
@@ -228,6 +225,7 @@ public class RssDiscovery {
                     toRead = is;
                 }
                 byte[] allBytes = toRead.readAllBytes();
+                toRead.close();
                 ByteArrayInputStream bais = new ByteArrayInputStream(allBytes);
                 XmlReader xmlReader = new XmlReader(bais);
                 SyndFeedInput input = new SyndFeedInput();
@@ -256,25 +254,24 @@ public class RssDiscovery {
                         trimToLength(MANAGING_EDITOR_FIELD_NAME, feed.getManagingEditor(), 256),
                         feed.getPublishedDate(),
                         feed.getStyleSheet(),
-                        isNotEmpty(feed.getSupportedFeedTypes()) ? new ArrayList<>(feed.getSupportedFeedTypes()) : new ArrayList<>(),
+                        isNotEmpty(feed.getSupportedFeedTypes()) ? new ArrayList<>(feed.getSupportedFeedTypes()) : new ArrayList<>(0),
                         trimToLength(WEB_MASTER_FIELD_NAME, feed.getWebMaster(), 256),
                         trimToLength(URI_FIELD_NAME, feed.getUri(), 1024),
                         new ArrayList<>(firstFiveCategories(feed.getCategories())
                                 .map(SyndCategory::getName)
-                                .map(n -> trimToLength(CATEGORIES_FIELD_NAME, n, 256))
+                                .map(name -> trimToLength(CATEGORIES_FIELD_NAME, name, 256))
                                 .collect(toSet())),
                         new ArrayList<>(importArticleResponse(null, null, url, null, feed, username, new Date())),
                         // is upgradable
                         isUrlUpgradable
                 );
             }
-        } catch (FeedDiscoveryException e) {
-            throw e;
-        } catch (Exception e) {
+        } catch (@SuppressWarnings("OverlyBroadCatchBlock") FeedException | IOException | IllegalArgumentException e) {
             throw new FeedDiscoveryException(url, statusCode, statusMessage, redirectUrl, redirectStatusCode, redirectStatusMessage, e);
         }
     }
 
+    @SuppressWarnings("OverlyBroadThrowsClause") // MalformedURLException extends IOException
     private static HttpURLConnection openFeedConnection(String url) throws IOException {
         URL feedUrl = new URL(url);
         return (HttpURLConnection) feedUrl.openConnection();
@@ -355,7 +352,7 @@ public class RssDiscovery {
      * @return True if the status code indicates a client error, otherwise false.
      */
     public static boolean isClientError(int statusCode) {
-        return statusCode >= HTTP_BAD_REQUEST && statusCode < HttpURLConnection.HTTP_INTERNAL_ERROR;
+        return statusCode >= HTTP_BAD_REQUEST && statusCode < HTTP_INTERNAL_ERROR;
     }
 
     /**
@@ -365,7 +362,7 @@ public class RssDiscovery {
      * @return True if the status code indicates a server error, otherwise false.
      */
     public static boolean isServerError(int statusCode) {
-        return statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR;
+        return statusCode >= HTTP_INTERNAL_ERROR;
     }
 
     private static boolean isUrlUpgradable(String url, String username, String password, String userAgent, int depth) {
@@ -438,7 +435,7 @@ public class RssDiscovery {
         return isNotBlank(feedImgUrl) ? printHexBinary(md.digest(serialize(feedImgUrl))) : null;
     }
 
-    private static Stream<SyndCategory> firstFiveCategories(List<SyndCategory> l) {
-        return l == null ? Stream.of() : l.subList(0, min(l.size(), 5)).stream();
+    private static Stream<SyndCategory> firstFiveCategories(List<SyndCategory> categories) {
+        return categories == null ? Stream.of() : categories.subList(0, min(categories.size(), 5)).stream();
     }
 }

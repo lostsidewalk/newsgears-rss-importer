@@ -1,5 +1,6 @@
 package com.lostsidewalk.buffy.rss;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -7,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
  * Configuration class for RSS Importer properties.
  * This class is used to configure properties related to RSS importing.
  */
+@Slf4j
 @Configuration
 @ConfigurationProperties(prefix = "rss.importer")
 public class RssImporterConfigProps {
@@ -19,7 +21,6 @@ public class RssImporterConfigProps {
      * Default constructor; initializes the object.
      */
     RssImporterConfigProps() {
-        super();
     }
 
     /**
@@ -27,7 +28,7 @@ public class RssImporterConfigProps {
      *
      * @return True if RSS importing is disabled, otherwise false.
      */
-    public boolean getDisabled() {
+    public final boolean getDisabled() {
         return disabled;
     }
 
@@ -37,7 +38,7 @@ public class RssImporterConfigProps {
      * @param disabled True to disable RSS importing, false to enable it.
      */
     @SuppressWarnings("unused")
-    public void setDisabled(boolean disabled) {
+    public final void setDisabled(boolean disabled) {
         this.disabled = disabled;
     }
 
@@ -46,7 +47,7 @@ public class RssImporterConfigProps {
      *
      * @return True if importing mock data is enabled, otherwise false.
      */
-    public boolean getImportMockData() {
+    public final boolean getImportMockData() {
         return importMockData;
     }
 
@@ -56,7 +57,15 @@ public class RssImporterConfigProps {
      * @param importMockData True to enable importing of mock data, false to disable it.
      */
     @SuppressWarnings("unused")
-    public void setImportMockData(boolean importMockData) {
+    public final void setImportMockData(boolean importMockData) {
         this.importMockData = importMockData;
+    }
+
+    @Override
+    public final String toString() {
+        return "RssImporterConfigProps{" +
+                "disabled=" + disabled +
+                ", importMockData=" + importMockData +
+                '}';
     }
 }

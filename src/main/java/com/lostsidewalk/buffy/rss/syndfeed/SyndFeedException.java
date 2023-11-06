@@ -6,6 +6,7 @@ import com.rometools.rome.io.ParsingFeedException;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Serial;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
@@ -17,6 +18,9 @@ import static com.lostsidewalk.buffy.subscription.SubscriptionMetrics.QueryExcep
  * Custom exception class for handling errors related to syndicated feed fetching and processing.
  */
 public class SyndFeedException extends Exception {
+
+    @Serial
+    private static final long serialVersionUID = 230498230498235L;
 
     /**
      * The URL of the feed that caused the exception.
@@ -99,6 +103,7 @@ public class SyndFeedException extends Exception {
         this.redirectHttpStatusCode = redirectHttpStatusCode;
         this.redirectHttpStatusMessage = redirectHttpStatusMessage;
         // Determine the exception type based on the underlying exception.
+        //noinspection IfStatementWithTooManyBranches,ChainOfInstanceofChecks
         if (exception instanceof FileNotFoundException) {
             exceptionType = FILE_NOT_FOUND_EXCEPTION;
         } else if (exception instanceof SSLHandshakeException) {
