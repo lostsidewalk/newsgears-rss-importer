@@ -28,7 +28,7 @@ import java.util.zip.GZIPInputStream;
 
 import static com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryExceptionType.*;
 import static com.lostsidewalk.buffy.discovery.FeedDiscoveryInfo.FeedDiscoveryExceptionType.HTTP_SERVER_ERROR;
-import static com.lostsidewalk.buffy.rss.RssImporter.importArticleResponse;
+import static com.lostsidewalk.buffy.rss.RssImportUtils.importArticleResponse;
 import static java.lang.Math.min;
 import static java.net.HttpURLConnection.*;
 import static java.net.InetAddress.getByName;
