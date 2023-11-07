@@ -96,7 +96,7 @@ public class RssImporterTest_ATOM2 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(SyndFeedService.fetch(
+            when(syndFeedService.fetch(
                     eq(TEST_ATOM_SUB.getUrl()),
                     isNull(),
                     isNull(),
@@ -104,7 +104,7 @@ public class RssImporterTest_ATOM2 {
                     eq(true))
                 ).thenReturn(syndFeedResponse);
             // carry out test
-            ImportResult importResult = RssImporter.performImport(TEST_ATOM_SUB, new ImportResponseCallback() {
+            ImportResult importResult = rssImporter.performImport(TEST_ATOM_SUB, new ImportResponseCallback() {
                 @Override
                 public ImportResult onSuccess(Set<StagingPost> set) {
                     assertNotNull(set);
@@ -170,7 +170,7 @@ public class RssImporterTest_ATOM2 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(SyndFeedService.fetch(
+            when(syndFeedService.fetch(
                     eq(TEST_ATOM_SUB.getUrl()),
                     isNull(),
                     isNull(),

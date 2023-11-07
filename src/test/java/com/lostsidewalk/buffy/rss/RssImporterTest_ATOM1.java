@@ -96,7 +96,7 @@ public class RssImporterTest_ATOM1 {
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
             // String url, String username, String password, String userAgent, boolean followUnsecureRedirects
-            when(SyndFeedService.fetch(
+            when(syndFeedService.fetch(
                     eq(TEST_ATOM_SUBSCRIPTION.getUrl()),
                     isNull(),
                     isNull(),
@@ -104,7 +104,7 @@ public class RssImporterTest_ATOM1 {
                     eq(true))
                 ).thenReturn(syndFeedResponse);
             // carry out test
-            ImportResult importResult = RssImporter.performImport(TEST_ATOM_SUBSCRIPTION, new ImportResponseCallback() {
+            ImportResult importResult = rssImporter.performImport(TEST_ATOM_SUBSCRIPTION, new ImportResponseCallback() {
                 @Override
                 public ImportResult onSuccess(Set<StagingPost> set) {
                     assertNotNull(set);
@@ -174,7 +174,7 @@ public class RssImporterTest_ATOM1 {
             SyndFeedInput syndFeedInput = new SyndFeedInput();
             SyndFeed response = syndFeedInput.build(new StringReader(TEST_ATOM_RESPONSE));
             SyndFeedResponse syndFeedResponse = SyndFeedResponse.from(response, 200, "OK");
-            when(SyndFeedService.fetch(
+            when(syndFeedService.fetch(
                     eq(TEST_ATOM_SUBSCRIPTION.getUrl()),
                     isNull(),
                     isNull(),

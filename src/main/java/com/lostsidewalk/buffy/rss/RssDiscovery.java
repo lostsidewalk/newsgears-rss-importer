@@ -36,6 +36,7 @@ import static java.net.URI.create;
 import static java.util.stream.Collectors.toSet;
 import static javax.xml.bind.DatatypeConverter.printHexBinary;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
 import static org.apache.commons.lang3.StringUtils.*;
 
@@ -428,7 +429,7 @@ public class RssDiscovery {
         if (syndContent == null) {
             return null;
         }
-        return ContentObject.from(syndContent.getType(), syndContent.getValue());
+        return ContentObject.from(randomAlphanumeric(8), syndContent.getType(), syndContent.getValue());
     }
 
     private static String computeThumbnailHash(MessageDigest md, String feedImgUrl) {

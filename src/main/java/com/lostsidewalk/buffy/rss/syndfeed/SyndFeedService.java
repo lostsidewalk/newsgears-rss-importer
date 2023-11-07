@@ -93,7 +93,7 @@ public class SyndFeedService {
      * @return A SyndFeedResponse object containing the syndicated feed and response information.
      * @throws SyndFeedException If an error occurs during fetching or processing the feed.
      */
-    public static SyndFeedResponse fetch(String url, String username, String password, String userAgent, boolean followUnsecureRedirects) throws SyndFeedException {
+    public SyndFeedResponse fetch(String url, String username, String password, String userAgent, boolean followUnsecureRedirects) throws SyndFeedException {
         Integer statusCode = null;
         String statusMessage = null;
         String redirectUrl = null;

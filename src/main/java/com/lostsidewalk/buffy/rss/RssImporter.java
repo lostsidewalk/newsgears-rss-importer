@@ -43,6 +43,7 @@ import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.collections4.CollectionUtils.size;
 import static org.apache.commons.collections4.MapUtils.isEmpty;
 import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
+import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
 import static org.apache.commons.lang3.StringUtils.*;
 
@@ -495,7 +496,7 @@ public class RssImporter implements Importer {
     private static ContentObject convertContentObject(SyndContent content) {
         ContentObject contentObject = null;
         if (content != null) {
-            contentObject = ContentObject.from(content.getType(), content.getValue());
+            contentObject = ContentObject.from(randomAlphanumeric(8), content.getType(), content.getValue());
         }
         return contentObject;
     }
@@ -505,7 +506,7 @@ public class RssImporter implements Importer {
         if (isNotEmpty(contents)) {
             list = new ArrayList<>(size(contents));
             for (SyndContent syndContent : contents) {
-                list.add(ContentObject.from(syndContent.getType(), syndContent.getValue()));
+                list.add(ContentObject.from(randomAlphanumeric(8), syndContent.getType(), syndContent.getValue()));
             }
         }
         return list;
@@ -591,7 +592,7 @@ public class RssImporter implements Importer {
 
     private static final String RSS_ATOM_IMPORTER_ID = "RssAtom";
 
-    static ImportResult performImport(SubscriptionDefinition subscriptionDefinition, ImportResponseCallback importResponseCallback) {
+    ImportResult performImport(SubscriptionDefinition subscriptionDefinition, ImportResponseCallback importResponseCallback) {
         requireNonNull(subscriptionDefinition, "Subscription definition must not be null");
         requireNonNull(importResponseCallback, "Import response callback must not be null");
         return performImport(RssQuery.from(subscriptionDefinition), 1, new SyndFeedResponseCallback() {
@@ -618,7 +619,7 @@ public class RssImporter implements Importer {
 
     private static final String RSS_ATOM_IMPORTER_USER_AGENT = "Lost Sidewalk FeedGears RSS Aggregator v.0.4 feed import process, on behalf of %d users";
 
-    private static ImportResult performImport(RssQuery rssQuery, int subscriberCt, SyndFeedResponseCallback syndFeedResponseCallback) {
+    private ImportResult performImport(RssQuery rssQuery, int subscriberCt, SyndFeedResponseCallback syndFeedResponseCallback) {
         log.info("Importing rssQuery={}", rssQuery);
 
         String queryType = rssQuery.getQueryType();
@@ -637,7 +638,7 @@ public class RssImporter implements Importer {
                 try {
                     log.info("Fetching RSS feed from url={}", queryText);
                     String userAgent = String.format(RSS_ATOM_IMPORTER_USER_AGENT, subscriberCt);
-                    importResult = syndFeedResponseCallback.onSuccess(SyndFeedService.fetch(queryText, feedUsername, feedPassword, userAgent, true));
+                    importResult = syndFeedResponseCallback.onSuccess(syndFeedService.fetch(queryText, feedUsername, feedPassword, userAgent, true));
                 } catch (SyndFeedException e) {
                     importResult = syndFeedResponseCallback.onFailure(e);
                 }
