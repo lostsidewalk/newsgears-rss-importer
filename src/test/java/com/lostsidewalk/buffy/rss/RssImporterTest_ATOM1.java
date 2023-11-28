@@ -40,12 +40,6 @@ import static org.mockito.Mockito.*;
 public class RssImporterTest_ATOM1 {
 
     @MockBean
-    Queue<StagingPost> successAggregator;
-
-    @MockBean
-    Queue<Throwable> errorAggregator;
-
-    @MockBean
     Queue<SubscriptionMetrics> subscriptionMetricsAggregator;
 
     @MockBean
@@ -190,8 +184,6 @@ public class RssImporterTest_ATOM1 {
     @Override
     public String toString() {
         return "RssImporterTest_ATOM1{" +
-                "successAggregator=" + successAggregator +
-                ", errorAggregator=" + errorAggregator +
                 ", subscriptionMetricsAggregator=" + subscriptionMetricsAggregator +
                 ", rssMockDataGenerator=" + rssMockDataGenerator +
                 ", syndFeedService=" + syndFeedService +

@@ -42,12 +42,6 @@ public class RssImporterTest_ATOM2 {
     RssImporterConfigProps configProps;
 
     @MockBean
-    Queue<StagingPost> successAggregator;
-
-    @MockBean
-    Queue<Throwable> errorAggregator;
-
-    @MockBean
     Queue<SubscriptionMetrics> subscriptionMetricsAggregator;
 
     @MockBean
@@ -187,8 +181,6 @@ public class RssImporterTest_ATOM2 {
     public String toString() {
         return "RssImporterTest_ATOM2{" +
                 "configProps=" + configProps +
-                ", successAggregator=" + successAggregator +
-                ", errorAggregator=" + errorAggregator +
                 ", subscriptionMetricsAggregator=" + subscriptionMetricsAggregator +
                 ", rssMockDataGenerator=" + rssMockDataGenerator +
                 ", syndFeedService=" + syndFeedService +

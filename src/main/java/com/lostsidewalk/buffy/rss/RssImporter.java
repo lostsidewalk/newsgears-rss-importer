@@ -77,12 +77,6 @@ public class RssImporter implements Importer {
     RssImporterConfigProps configProps;
 
     @Autowired
-    private Queue<StagingPost> successAggregator;
-
-    @Autowired
-    private Queue<Throwable> errorAggregator;
-
-    @Autowired
     private RssMockDataGenerator rssMockDataGenerator;
 
     @Autowired
@@ -267,7 +261,6 @@ public class RssImporter implements Importer {
             @Override
             public ImportResult onFailure(SyndFeedException exception) {
                 log.error("Import failure due to: {}", exception.getMessage());
-                errorAggregator.offer(exception);
                 List<SubscriptionMetrics> subscriptionMetrics = new ArrayList<>(size(subscriptionDefinitions));
                 subscriptionDefinitions.stream()
                     .map(q -> SubscriptionMetrics.from(
@@ -381,8 +374,6 @@ public class RssImporter implements Importer {
     public final String toString() {
         return "RssImporter{" +
                 "configProps=" + configProps +
-                ", successAggregator=" + successAggregator +
-                ", errorAggregator=" + errorAggregator +
                 ", rssMockDataGenerator=" + rssMockDataGenerator +
                 ", syndFeedService=" + syndFeedService +
                 ", rssThreadPool=" + rssThreadPool +
