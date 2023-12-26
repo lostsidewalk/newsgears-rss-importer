@@ -10,6 +10,11 @@ import com.rometools.rome.feed.synd.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
 import java.io.Serializable;
 import java.net.URI;
 import java.security.MessageDigest;
@@ -23,6 +28,7 @@ import static org.apache.commons.lang3.ArrayUtils.isNotEmpty;
 import static org.apache.commons.lang3.RandomStringUtils.randomAlphanumeric;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
 import static org.apache.commons.lang3.StringUtils.*;
+import static org.jsoup.parser.Parser.xmlParser;
 
 @Slf4j
 class RssImportUtils {
@@ -88,7 +94,9 @@ class RssImportUtils {
     static String getObjectSource(StagingPost stagingPost) {
         return getObjectSource(
                 stagingPost.getPostTitle().getValue(),
-                ofNullable(stagingPost.getPostDesc()).map(ContentObject::getValue).orElse(EMPTY),
+                ofNullable(stagingPost.getPostDesc())
+                        .map(ContentObject::getValue)
+                        .orElse(EMPTY),
                 stagingPost.getPostUrl(),
                 stagingPost.getPublishTimestamp(),
                 stagingPost.getLastUpdatedTimestamp());
@@ -96,8 +104,8 @@ class RssImportUtils {
 
     static String getObjectSource(String title, String description, String link, Date publishTimestamp, Date lastUpdatedTimestamp) {
         JsonObject objectSrc = new JsonObject();
-        objectSrc.addProperty("title", title);
-        objectSrc.addProperty("description", description);
+        objectSrc.addProperty("title", normalizeHtml(title));
+        objectSrc.addProperty("description", normalizeHtml(description));
         objectSrc.addProperty("link", link);
         //
         if (publishTimestamp != null) {
@@ -107,6 +115,22 @@ class RssImportUtils {
             objectSrc.addProperty("updated", lastUpdatedTimestamp.getTime());
         }
         return objectSrc.toString();
+    }
+
+    private static String normalizeHtml(String source) {
+        try {
+            Document document = Jsoup.parse(source, EMPTY, xmlParser());
+            Elements elements = document.select("*");
+
+            StringBuilder plainText = new StringBuilder(size(elements));
+            for (Element element : elements) {
+                plainText.append(element.toString()).append(" ");
+            }
+
+            return plainText.toString().trim();
+        } catch (RuntimeException ignored) {
+            return source;
+        }
     }
 
     static PostMedia getPostMedia(SyndEntry e) {

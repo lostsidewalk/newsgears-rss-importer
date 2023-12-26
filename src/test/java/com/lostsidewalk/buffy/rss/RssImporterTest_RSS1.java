@@ -143,7 +143,7 @@ public class RssImporterTest_RSS1 {
                     assertEquals("https://cdn.cnn.com/cnnnext/dam/assets/221127112511-iran-flag-world-cup-1125-super-169.jpg", stagingPost.getPostImgUrl());
                     assertEquals("CBAB8C3E106008CFCC17D41141FBA8B4", stagingPost.getPostImgTransportIdent());
                     assertNotNull(stagingPost.getImportTimestamp());
-                    assertEquals("B67FB37B671F1BD3C82E0AF8FDEB40CC", stagingPost.getPostHash());
+                    assertEquals("C25077AD17AEB0395507DC6F3F0E3C1B", stagingPost.getPostHash());
                     assertEquals("me", stagingPost.getUsername());
                     assertNotNull(stagingPost.getPublishTimestamp());
                     assertEquals("Tue Nov 29 07:18:37 CST 2022", stagingPost.getPublishTimestamp().toString());

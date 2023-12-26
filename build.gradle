@@ -8,7 +8,7 @@ apply plugin: 'java-library'
 apply plugin: 'signing'
 
 group = 'com.lostsidewalk.newsgears'
-version = '0.5.12'
+version = '0.5.13'
 
 java {
     toolchain {
@@ -31,8 +31,8 @@ repositories {
 }
 
 dependencies {
-    api 'com.lostsidewalk.newsgears:newsgears-data:0.5.12'
-    api 'com.lostsidewalk.newsgears:newsgears-data:0.5.12:javadoc'
+    api 'com.lostsidewalk.newsgears:newsgears-data:0.5.13'
+    api 'com.lostsidewalk.newsgears:newsgears-data:0.5.13:javadoc'
 
     // SLF4J
     implementation 'org.slf4j:slf4j-api:2.0.5'
@@ -55,6 +55,8 @@ dependencies {
     implementation 'com.rometools:rome:2.1.0'
     // rome-modules
     implementation 'com.rometools:rome-modules:2.1.0'
+    // jsoup
+    implementation 'org.jsoup:jsoup:1.15.4'
     // jackson-core
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.0'
     // jackson-databind

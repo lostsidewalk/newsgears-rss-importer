@@ -129,7 +129,7 @@ public class RssImporterTest_ATOM1 {
                     //
                     assertNull(stagingPost.getPostImgUrl());
                     assertNotNull(stagingPost.getImportTimestamp());
-                    assertEquals("FDDE18F6B454A0073E4D19F3444F9D2C", stagingPost.getPostHash());
+                    assertEquals("1CC77874FA1D982857BF42AEEFE71213", stagingPost.getPostHash());
                     assertEquals("me", stagingPost.getUsername());
                     //
                     List<PostPerson> authors = stagingPost.getAuthors();
